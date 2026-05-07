@@ -64,7 +64,9 @@ const Cart: React.FC = () => {
 
   if (loading) return <div className="flex items-center justify-center h-screen text-gray-500">加载中...</div>;
 
-  if (!cart || cart.cartItems.length === 0) {
+  const items = cart?.cartItems || (cart as any)?.items || [];
+
+  if (!cart || items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] p-6 text-center">
         <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -85,24 +87,24 @@ const Cart: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen pb-32">
       <header className="bg-white p-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
-        <h1 className="text-lg font-bold text-gray-800">购物车 ({cart.cartItems.length})</h1>
+        <h1 className="text-lg font-bold text-gray-800">购物车 ({items.length})</h1>
         <button onClick={() => cartApi.clearCart().then(fetchCart)} className="text-xs text-gray-400">清空</button>
       </header>
 
       <div className="p-4 space-y-4">
-        {Array.isArray(cart?.cartItems) && cart.cartItems.map((item) => (
-          <div key={item.productId} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
+        {Array.isArray(items) && items.map((item: any) => (
+          <div key={item.productId || item.id} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
             <div className="flex items-center">
               <input
                 type="checkbox"
                 checked={item.selected}
-                onChange={(e) => handleSelect(item.productId, e.target.checked)}
+                onChange={(e) => handleSelect(item.productId || item.id, e.target.checked)}
                 className="w-5 h-5 rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500"
               />
             </div>
             <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
               <img 
-                src={item.productMainImage || 'https://picsum.photos/seed/product/200/200'} 
+                src={item.productMainImage || item.productImage || 'https://picsum.photos/seed/product/200/200'}
                 alt={item.productName}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -114,19 +116,19 @@ const Cart: React.FC = () => {
                 <span className="text-xs text-gray-400">规格：默认</span>
               </div>
               <div className="flex items-end justify-between">
-                <span className="text-emerald-600 font-bold text-sm">{formatPrice(item.productPrice)}</span>
+                <span className="text-emerald-600 font-bold text-sm">{formatPrice(item.productPrice || item.price)}</span>
                 <div className="flex items-center gap-3 bg-gray-50 rounded-full px-3 py-1">
-                  <button onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)} className="text-gray-400">
+                  <button onClick={() => handleUpdateQuantity(item.productId || item.id, item.quantity - 1)} className="text-gray-400">
                     <Minus size={14} />
                   </button>
                   <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                  <button onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)} className="text-gray-400">
+                  <button onClick={() => handleUpdateQuantity(item.productId || item.id, item.quantity + 1)} className="text-gray-400">
                     <Plus size={14} />
                   </button>
                 </div>
               </div>
             </div>
-            <button onClick={() => handleRemove(item.productId)} className="text-gray-300 hover:text-red-500">
+            <button onClick={() => handleRemove(item.productId || item.id)} className="text-gray-300 hover:text-red-500">
               <Trash2 size={18} />
             </button>
           </div>
@@ -138,7 +140,7 @@ const Cart: React.FC = () => {
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={cart.allSelected}
+            checked={cart?.allSelected || false}
             onChange={(e) => handleSelectAll(e.target.checked)}
             className="w-5 h-5 rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500"
           />
@@ -147,7 +149,7 @@ const Cart: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="text-right">
             <p className="text-[10px] text-gray-400">合计</p>
-            <p className="text-lg font-bold text-emerald-600">{formatPrice(cart.selectedAmount)}</p>
+            <p className="text-lg font-bold text-emerald-600">{formatPrice(cart?.selectedAmount || items.filter((i: any) => i.selected).reduce((sum: number, i: any) => sum + ((i.price || i.productPrice) * i.quantity), 0))}</p>
           </div>
           <button 
             onClick={() => navigate('/checkout')}

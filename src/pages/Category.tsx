@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, ShoppingCart, Heart } from 'lucide-react';
 import { categoryApi, productApi } from '@/src/api';
 import { CategoryTreeVO, ProductVO } from '@/src/api/types';
-import { Link } from 'react-router-dom';
 import { formatPrice, cn } from '@/src/lib/utils';
 
 const Category: React.FC = () => {
@@ -66,54 +67,73 @@ const Category: React.FC = () => {
       </aside>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="flex flex-col gap-4">
-          <header className="mb-2">
-            <h2 className="text-base font-bold text-gray-800">
-              {(Array.isArray(categories) ? categories.find(c => c.id === activeCategory)?.name : '') || '分类商品'}
-            </h2>
-          </header>
-
+      <main className="flex-1 bg-white overflow-y-auto w-0 relative">
+        <div className="p-4 pb-20">
           {loading ? (
-            <div className="flex justify-center py-20 text-gray-400 text-sm">加载中...</div>
+            <div className="flex items-center justify-center h-40 text-gray-400 text-xs">加载中...</div>
           ) : products.length === 0 ? (
-            <div className="flex justify-center py-20 text-gray-400 text-sm">暂无商品</div>
+            <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-xs gap-2">
+              <Filter size={24} className="opacity-20" />
+              暂无商品
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {Array.isArray(products) && products.map((product) => (
-                <Link 
-                  to={`/product/${product.id}`} 
-                  key={product.id}
-                  className="flex gap-3 bg-white p-2 rounded-xl border border-gray-50 shadow-sm"
-                >
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                    <img 
-                      src={product.mainImage || 'https://picsum.photos/seed/nutrition/200/200'} 
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                  <div className="flex flex-col justify-between py-1">
-                    <h4 className="text-sm font-medium text-gray-800 line-clamp-2">
-                      {product.name}
-                    </h4>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-emerald-600 font-bold text-sm">
-                        {formatPrice(product.price)}
-                      </span>
-                      <span className="text-[10px] text-gray-400">
-                        销量 {product.sales}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
+                <CategoryProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
         </div>
       </main>
     </div>
+  );
+};
+
+const CategoryProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    const checkFav = async () => {
+      try {
+        const fav = await productApi.checkFavorite(product.id);
+        setIsFavorite(fav);
+      } catch (e) {
+        // Ignore if not logged in
+      }
+    };
+    checkFav();
+  }, [product.id]);
+
+  return (
+    <Link
+      to={`/product/${product.id}`}
+      className="flex gap-3 bg-white p-2 rounded-xl border border-gray-50 shadow-sm relative"
+    >
+      <div className="absolute top-2 right-2 z-10">
+        <Heart size={14} className={isFavorite ? 'fill-current text-red-500' : 'text-gray-300'} />
+      </div>
+      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+        <img
+          src={product.mainImage || 'https://picsum.photos/seed/nutrition/200/200'}
+          alt={product.name}
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <div className="flex flex-col justify-between py-1 w-full pr-6">
+        <h4 className="text-sm font-medium text-gray-800 line-clamp-2">
+          {product.name}
+        </h4>
+        <div className="flex items-baseline gap-2">
+          <span className="text-emerald-600 font-bold text-sm">
+            {formatPrice(product.price)}
+          </span>
+          <span className="text-[10px] text-gray-400">
+            销量 {product.sales}
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 };
 

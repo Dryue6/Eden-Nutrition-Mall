@@ -23,18 +23,60 @@ const OrderDetail: React.FC = () => {
           setLoading(false);
         }
       };
+
       fetchDetail();
     }
   }, [orderNo]);
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    try {
+      await orderApi.cancelOrder(order.orderNo);
+      alert('订单已取消');
+      // Refresh
+      const data = await orderApi.getOrderDetail(order.orderNo);
+      setOrder(data);
+    } catch (error) {
+      console.error('Failed to cancel order', error);
+    }
+  };
+
+  const handlePayOrder = async () => {
+    if (!order) return;
+    try {
+      await orderApi.payOrder(order.orderNo, 1);
+      alert('支付成功');
+      const data = await orderApi.getOrderDetail(order.orderNo);
+      setOrder(data);
+    } catch (error) {
+      console.error('Failed to pay order', error);
+    }
+  };
+
+  const handleConfirmReceive = async () => {
+    if (!order) return;
+    try {
+      await orderApi.confirmReceive(order.orderNo);
+      alert('已确认收货');
+      const data = await orderApi.getOrderDetail(order.orderNo);
+      setOrder(data);
+    } catch (error) {
+      console.error('Failed to confirm receive', error);
+    }
+  };
 
   if (loading) return <div className="flex items-center justify-center h-screen text-gray-500">加载中...</div>;
   if (!order) return <div className="flex items-center justify-center h-screen text-gray-500">订单不存在</div>;
 
   const steps = [
     { label: '提交订单', icon: <Package size={16} />, active: true },
-    { label: '支付成功', icon: <CreditCard size={16} />, active: order.status >= 1 },
-    { label: '商家发货', icon: <Truck size={16} />, active: order.status >= 2 },
-    { label: '确认收货', icon: <CheckCircle size={16} />, active: order.status >= 3 },
+    { label: '支付成功', icon: <CreditCard size={16} />, active: order.status >= 1 && order.status < 4 },
+    { label: '商家发货', icon: <Truck size={16} />, active: order.status >= 2 && order.status < 4 },
+    {
+      label: order.status === 4 ? '已取消' : order.status === 5 ? '已退款' : '交易完成',
+      icon: <CheckCircle size={16} />,
+      active: order.status === 3 || order.status === 4 || order.status === 5
+    },
   ];
 
   return (
@@ -95,7 +137,7 @@ const OrderDetail: React.FC = () => {
                   <h4 className="text-xs font-medium text-gray-800 line-clamp-2">{item.productName}</h4>
                   <div className="flex justify-between items-end">
                     <span className="text-xs text-gray-400">x{item.quantity}</span>
-                    <span className="text-sm font-bold text-gray-800">{formatPrice(item.currentUnitPrice)}</span>
+                    <span className="text-sm font-bold text-gray-800">{formatPrice(item.currentUnitPrice || item.price)}</span>
                   </div>
                 </div>
               </div>
@@ -133,8 +175,13 @@ const OrderDetail: React.FC = () => {
       {/* Actions */}
       {order.status === 0 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
-          <button className="px-6 py-2 rounded-full border border-gray-200 text-gray-500 text-sm font-medium">取消订单</button>
-          <button className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">立即支付</button>
+          <button onClick={handleCancelOrder} className="px-6 py-2 rounded-full border border-gray-200 text-gray-500 text-sm font-medium">取消订单</button>
+          <button onClick={handlePayOrder} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">立即支付</button>
+        </div>
+      )}
+      {order.status === 1 && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
+          <button onClick={handleConfirmReceive} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">确认收货</button>
         </div>
       )}
     </div>

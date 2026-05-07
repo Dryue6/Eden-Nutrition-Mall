@@ -38,26 +38,25 @@ const Checkout: React.FC = () => {
       alert('请选择收货地址');
       return;
     }
-    if (!cart || !Array.isArray(cart.cartItems) || cart.cartItems.filter(i => i.selected).length === 0) {
+
+    const items = cart?.cartItems || (cart as any)?.items || [];
+    const selectedItems = items.filter((i: any) => i.selected);
+
+    if (selectedItems.length === 0) {
       alert('购物车没有选中的商品');
       return;
     }
 
     try {
       const order = await orderApi.createOrder({
-        items: cart.cartItems.filter(i => i.selected).map(i => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          price: i.productPrice
-        })),
-        receiverName: address.receiverName,
-        receiverPhone: address.receiverPhone,
-        receiverAddress: `${address.province}${address.city}${address.district}${address.detailAddress}`,
-        couponId: selectedCoupon?.userCouponId,
+        addressId: address.id,
+        userCouponId: selectedCoupon?.userCouponId || null,
+        productIds: selectedItems.map((i: any) => i.productId || i.id),
+        remark: ""
       });
       // After creation, redirect to pay or order detail
       // Direct to order detail with the new order's ID
-      navigate(`/order/${order.id}`);
+      navigate(`/order/${order.orderNo}`);
     } catch (error) {
       console.error('Failed to create order', error);
       alert('下单失败');
@@ -66,7 +65,18 @@ const Checkout: React.FC = () => {
 
   if (loading) return <div className="flex items-center justify-center h-screen text-gray-500">加载中...</div>;
 
-  const finalAmount = (cart?.selectedAmount || 0) - (selectedCoupon?.value || 0);
+  const items = cart?.cartItems || (cart as any)?.items || [];
+
+  // Calculate proper total amount since backend returns null for selectedAmount sometimes
+  const fallbackAmount = items
+    .filter((i: any) => i.selected)
+    .reduce((sum: number, i: any) => sum + (i.subtotal || i.totalPrice || (i.price || i.productPrice) * i.quantity || 0), 0);
+
+  const checkoutTotalDesc = cart?.selectedAmount !== null && cart?.selectedAmount !== undefined
+    ? cart.selectedAmount
+    : fallbackAmount;
+
+  const finalAmount = checkoutTotalDesc - (selectedCoupon?.value || 0);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
@@ -106,7 +116,7 @@ const Checkout: React.FC = () => {
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
           <h3 className="text-sm font-bold text-gray-800 mb-4">商品清单</h3>
           <div className="space-y-4">
-            {Array.isArray(cart?.cartItems) && cart.cartItems.filter(i => i.selected).map((item) => (
+            {items.filter((i: any) => i.selected).map((item: any) => (
               <div key={item.productId} className="flex gap-3">
                 <img 
                   src={item.productMainImage || 'https://picsum.photos/seed/product/100/100'} 
@@ -116,7 +126,7 @@ const Checkout: React.FC = () => {
                 <div className="flex-1 flex flex-col justify-between py-0.5">
                   <h4 className="text-xs font-medium text-gray-800 line-clamp-1">{item.productName}</h4>
                   <div className="flex justify-between items-end">
-                    <span className="text-sm font-bold text-gray-800">{formatPrice(item.productPrice)}</span>
+                    <span className="text-sm font-bold text-gray-800">{formatPrice(item.productPrice || item.price)}</span>
                     <span className="text-xs text-gray-400">x{item.quantity}</span>
                   </div>
                 </div>
@@ -143,7 +153,7 @@ const Checkout: React.FC = () => {
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">商品总额</span>
-            <span className="text-gray-800 font-medium">{formatPrice(cart?.selectedAmount || 0)}</span>
+            <span className="text-gray-800 font-medium">{formatPrice(checkoutTotalDesc)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">运费</span>

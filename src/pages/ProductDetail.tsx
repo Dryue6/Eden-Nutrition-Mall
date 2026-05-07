@@ -13,6 +13,7 @@ const ProductDetail: React.FC = () => {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -26,13 +27,33 @@ const ProductDetail: React.FC = () => {
           setReviews(r.list);
         } catch (error) {
           console.error('Failed to fetch product detail', error);
-        } finally {
-          setLoading(false);
         }
+
+        try {
+          const fav = await productApi.checkFavorite(Number(id));
+          setIsFavorite(fav);
+        } catch (error) {
+          console.error('Failed to check favorite status', error);
+        }
+
+        setLoading(false);
       };
       fetchData();
     }
   }, [id]);
+
+  const handleToggleFavorite = async () => {
+    if (!product) return;
+    try {
+      const res = await productApi.toggleFavorite(product.id);
+      setIsFavorite(res);
+      alert(res ? '已收藏' : '已取消收藏');
+    } catch (error) {
+      console.error('Failed to toggle favorite', error);
+      alert('请先登录');
+      navigate('/login');
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -148,8 +169,8 @@ const ProductDetail: React.FC = () => {
             <MessageSquare size={20} />
             <span className="text-[10px]">客服</span>
           </button>
-          <button className="flex flex-col items-center gap-1 text-gray-500">
-            <Heart size={20} />
+          <button onClick={handleToggleFavorite} className={`flex flex-col items-center gap-1 ${isFavorite ? 'text-red-500' : 'text-gray-500'}`}>
+            <Heart size={20} className={isFavorite ? 'fill-current text-red-500' : ''} />
             <span className="text-[10px]">收藏</span>
           </button>
           <button onClick={() => navigate('/cart')} className="flex flex-col items-center gap-1 text-gray-500 relative">

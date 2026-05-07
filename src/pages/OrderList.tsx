@@ -78,7 +78,7 @@ const OrderList: React.FC = () => {
                       <h4 className="text-xs font-medium text-gray-800 line-clamp-1">{item.productName}</h4>
                       <div className="flex justify-between items-end">
                         <span className="text-xs text-gray-400">x{item.quantity}</span>
-                        <span className="text-sm font-bold text-gray-800">{formatPrice(item.currentUnitPrice)}</span>
+                        <span className="text-sm font-bold text-gray-800">{formatPrice(item.currentUnitPrice || item.price)}</span>
                       </div>
                     </div>
                   </div>
@@ -95,13 +95,59 @@ const OrderList: React.FC = () => {
 
               <div className="flex justify-end gap-2 mt-4">
                 {order.status === 0 && (
-                  <button className="px-4 py-1.5 rounded-full border border-emerald-600 text-emerald-600 text-xs font-bold">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      orderApi.payOrder(order.orderNo, 1).then(() => {
+                        alert('支付成功');
+                        fetchOrders();
+                      });
+                    }}
+                    className="px-4 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold"
+                  >
                     立即支付
                   </button>
                 )}
+                {order.status === 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      orderApi.cancelOrder(order.orderNo).then(() => {
+                        alert('订单已取消');
+                        fetchOrders();
+                      });
+                    }}
+                    className="px-4 py-1 rounded-full border border-gray-200 text-gray-500 text-xs font-medium"
+                  >
+                    取消订单
+                  </button>
+                )}
                 {order.status === 2 && (
-                  <button className="px-4 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      orderApi.confirmReceive(order.orderNo).then(() => {
+                        alert('已确认收货');
+                        fetchOrders();
+                      });
+                    }}
+                    className="px-4 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold"
+                  >
                     确认收货
+                  </button>
+                )}
+                {(order.status === 3 || order.status === 4) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      orderApi.deleteOrder(order.orderNo).then(() => {
+                        alert('删除成功');
+                        fetchOrders();
+                      });
+                    }}
+                    className="px-4 py-1 rounded-full border border-gray-200 text-gray-500 text-xs font-medium"
+                  >
+                    删除订单
                   </button>
                 )}
               </div>

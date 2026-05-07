@@ -66,8 +66,8 @@ export const orderApi = {
   createOrder: (data: any) => request.post<any, Order>('/order/create', data),
   getOrderList: (params: any) => request.get<any, PageVO<Order>>('/order/list', { params }),
   getOrderDetail: (id: number | string) => request.get<any, Order>(`/order/${id}`),
-  cancelOrder: (id: number | string, reason?: string) => request.post(`/order/${id}/cancel`, { reason }),
-  payOrder: (id: number | string, data: any) => request.post(`/order/${id}/pay`, data),
+  cancelOrder: (id: number | string, reason?: string) => request.post(`/order/cancel/${id}`, { reason }),
+  payOrder: (orderNo: string, payType: number = 1) => request.post(`/order/pay/${orderNo}?payType=${payType}`),
   confirmReceive: (orderNo: string) => request.post(`/order/confirm/${orderNo}`),
   deleteOrder: (orderNo: string) => request.delete(`/order/${orderNo}`),
 };
@@ -79,7 +79,9 @@ export const productApi = {
   getHotProducts: (limit = 10) => request.get<any, ProductVO[]>('/product/hot', { params: { limit } }),
   getRecommendProducts: (limit = 10) => request.get<any, ProductVO[]>('/product/recommend', { params: { limit } }),
   getNewProducts: (limit = 10) => request.get<any, ProductVO[]>('/product/new', { params: { limit } }),
-  getByCategory: (categoryId: number) => request.get<any, PageVO<ProductVO>>('/product/list', { params: { categoryId } }),
+  getByCategory: (categoryId: number) => request.get<any, ProductVO[]>(`/product/category/${categoryId}`),
+  toggleFavorite: (id: number) => request.post<any, boolean>(`/product/favorite/${id}`),
+  checkFavorite: (id: number) => request.get<any, boolean>(`/product/favorite/check/${id}`),
 };
 
 // Review Module

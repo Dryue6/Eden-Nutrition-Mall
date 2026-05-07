@@ -10,7 +10,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  // Only use json parsing for mock-api to prevent stealing the request body from Vite proxy
+  app.use('/mock-api', express.json());
 
   // --- MOCK DATA ---
   const mockProducts = [
@@ -83,11 +84,11 @@ async function startServer() {
   // --- MOCK API IMPLEMENTATION ---
   
   // User Module
-  app.post("/api/user/register", (req, res) => {
+  app.post("/mock-api/user/register", (req, res) => {
     res.json({ code: 200, message: "注册成功", data: null });
   });
 
-  app.post("/api/user/login", (req, res) => {
+  app.post("/mock-api/user/login", (req, res) => {
     const { username } = req.body;
     res.json({
       code: 200,
@@ -96,7 +97,7 @@ async function startServer() {
         userId: 10001,
         username: username || "admin",
         nickname: "管理员",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+        avatar: "https://mock-api.dicebear.com/7.x/avataaars/svg?seed=Felix",
         role: "ADMIN",
         token: "mock-jwt-token-" + Date.now(),
         createTime: new Date().toISOString()
@@ -104,7 +105,7 @@ async function startServer() {
     });
   });
 
-  app.get("/api/user/info", (req, res) => {
+  app.get("/mock-api/user/info", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -114,7 +115,7 @@ async function startServer() {
         nickname: "管理员",
         phone: "138****8000",
         email: "admin@example.com",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+        avatar: "https://mock-api.dicebear.com/7.x/avataaars/svg?seed=Felix",
         gender: 1,
         points: 1000,
         status: 1,
@@ -124,12 +125,12 @@ async function startServer() {
     });
   });
 
-  app.post("/api/user/logout", (req, res) => {
+  app.post("/mock-api/user/logout", (req, res) => {
     res.json({ code: 200, message: "登出成功", data: null });
   });
 
   // Product Module
-  app.get("/api/product/list", (req, res) => {
+  app.get("/mock-api/product/list", (req, res) => {
     const { keyword, categoryId, sortBy, pageNum = 1, pageSize = 10 } = req.query;
     let list = [...mockProducts];
     if (keyword) {
@@ -157,19 +158,19 @@ async function startServer() {
     });
   });
 
-  app.get("/api/product/hot", (req, res) => {
+  app.get("/mock-api/product/hot", (req, res) => {
     res.json({ code: 200, message: "操作成功", data: mockProducts.filter(p => p.isHot) });
   });
 
-  app.get("/api/product/new", (req, res) => {
+  app.get("/mock-api/product/new", (req, res) => {
     res.json({ code: 200, message: "操作成功", data: mockProducts.filter(p => p.isNew) });
   });
 
-  app.get("/api/product/recommend", (req, res) => {
+  app.get("/mock-api/product/recommend", (req, res) => {
     res.json({ code: 200, message: "操作成功", data: mockProducts });
   });
 
-  app.get("/api/product/:id", (req, res) => {
+  app.get("/mock-api/product/:id", (req, res) => {
     const product = mockProducts.find(p => p.id === Number(req.params.id));
     if (product) {
       res.json({ code: 200, message: "操作成功", data: product });
@@ -197,7 +198,7 @@ async function startServer() {
     allSelected: true
   };
 
-  app.get("/api/cart", (req, res) => {
+  app.get("/mock-api/cart", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -205,7 +206,7 @@ async function startServer() {
     });
   });
 
-  app.post("/api/cart/add", (req, res) => {
+  app.post("/mock-api/cart/add", (req, res) => {
     const { productId, quantity } = req.body;
     const product = mockProducts.find(p => p.id === productId);
     if (!product) return res.status(404).json({ code: 2001, message: "商品不存在" });
@@ -229,7 +230,7 @@ async function startServer() {
     res.json({ code: 200, message: "添加成功", data: null });
   });
 
-  app.put("/api/cart/quantity", (req, res) => {
+  app.put("/mock-api/cart/quantity", (req, res) => {
     const { productId, quantity } = req.body;
     const item = mockCart.cartItems.find(i => i.productId === productId);
     if (item) {
@@ -240,19 +241,19 @@ async function startServer() {
     res.json({ code: 200, message: "更新成功", data: null });
   });
 
-  app.delete("/api/cart/clear", (req, res) => {
+  app.delete("/mock-api/cart/clear", (req, res) => {
     mockCart.cartItems = [];
     updateCartTotals();
     res.json({ code: 200, message: "已清空", data: null });
   });
 
-  app.delete("/api/cart/:productId", (req, res) => {
+  app.delete("/mock-api/cart/:productId", (req, res) => {
     mockCart.cartItems = mockCart.cartItems.filter(i => i.productId !== Number(req.params.productId));
     updateCartTotals();
     res.json({ code: 200, message: "已移除", data: null });
   });
 
-  app.put("/api/cart/select", (req, res) => {
+  app.put("/mock-api/cart/select", (req, res) => {
     const { productId, selected } = req.body;
     const item = mockCart.cartItems.find(i => i.productId === productId);
     if (item) {
@@ -262,7 +263,7 @@ async function startServer() {
     res.json({ code: 200, message: "设置成功", data: null });
   });
 
-  app.put("/api/cart/selectAll", (req, res) => {
+  app.put("/mock-api/cart/selectAll", (req, res) => {
     const { selected } = req.body;
     mockCart.cartItems.forEach(i => i.selected = selected);
     updateCartTotals();
@@ -276,7 +277,7 @@ async function startServer() {
   }
 
   // Category Module
-  app.get("/api/category/tree", (req, res) => {
+  app.get("/mock-api/category/tree", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -289,7 +290,7 @@ async function startServer() {
   });
 
   // Order Module
-  app.post("/api/order/create", (req, res) => {
+  app.post("/mock-api/order/create", (req, res) => {
     const { items, receiverName, receiverPhone, receiverAddress, couponId } = req.body;
     
     // Calculate total amount
@@ -339,7 +340,7 @@ async function startServer() {
     });
   });
 
-  app.get("/api/order/list", (req, res) => {
+  app.get("/mock-api/order/list", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -353,7 +354,7 @@ async function startServer() {
     });
   });
 
-  app.get("/api/order/:id", (req, res) => {
+  app.get("/mock-api/order/:id", (req, res) => {
     const order = mockOrders.find(o => o.id === Number(req.params.id) || o.orderNo === req.params.id);
     if (order) {
       res.json({ code: 200, message: "操作成功", data: order });
@@ -362,7 +363,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/order/:id/cancel", (req, res) => {
+  app.post("/mock-api/order/:id/cancel", (req, res) => {
     const order = mockOrders.find(o => o.id === Number(req.params.id));
     if (order) {
       order.status = 4;
@@ -373,7 +374,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/order/:id/pay", (req, res) => {
+  app.post("/mock-api/order/:id/pay", (req, res) => {
     const order = mockOrders.find(o => o.id === Number(req.params.id));
     if (order) {
       order.status = 1;
@@ -394,7 +395,7 @@ async function startServer() {
   });
 
   // Address Module
-  app.get("/api/address/list", (req, res) => {
+  app.get("/mock-api/address/list", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -404,7 +405,7 @@ async function startServer() {
     });
   });
 
-  app.get("/api/address/default", (req, res) => {
+  app.get("/mock-api/address/default", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -413,7 +414,7 @@ async function startServer() {
   });
 
   // Coupon Module
-  app.get("/api/coupon/usable", (req, res) => {
+  app.get("/mock-api/coupon/usable", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -424,7 +425,7 @@ async function startServer() {
   });
 
   // Seckill Module
-  app.get("/api/seckill/sessions", (req, res) => {
+  app.get("/mock-api/seckill/sessions", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -435,7 +436,7 @@ async function startServer() {
     });
   });
 
-  app.get("/api/seckill/list", (req, res) => {
+  app.get("/mock-api/seckill/list", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
@@ -462,13 +463,13 @@ async function startServer() {
   });
 
   // Review Module
-  app.get("/api/review/product/:productId", (req, res) => {
+  app.get("/mock-api/review/product/:productId", (req, res) => {
     res.json({
       code: 200,
       message: "操作成功",
       data: {
         list: [
-          { id: 1, userId: 10001, nickname: "健身达人", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1", rating: 5, content: "效果非常好，已经回购多次了！", createTime: new Date().toISOString() },
+          { id: 1, userId: 10001, nickname: "健身达人", avatar: "https://mock-api.dicebear.com/7.x/avataaars/svg?seed=1", rating: 5, content: "效果非常好，已经回购多次了！", createTime: new Date().toISOString() },
         ],
         total: 1
       }
@@ -476,7 +477,7 @@ async function startServer() {
   });
 
   // Generic 404 for other API routes
-  app.all("/api/*", (req, res) => {
+  app.all("/mock-api/*", (req, res) => {
     console.warn(`Mock API not implemented: ${req.method} ${req.url}`);
     res.status(404).json({ code: 404, message: `Mock API not implemented: ${req.url}` });
   });
