@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Share2, ShoppingCart, Heart, MessageSquare } from 'lucide-react';
+import Taro from '@tarojs/taro';
+import { View, Image, RichText } from '@tarojs/components';
 import { productApi, cartApi, reviewApi } from '@/src/api';
 import { ProductVO, ProductReview } from '@/src/api/types';
 import { formatPrice, formatDate } from '@/src/lib/utils';
-import { motion } from 'motion/react';
 
 const ProductDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const router = Taro.getCurrentInstance().router;
+  const id = router?.params?.id;
   const [product, setProduct] = useState<ProductVO | null>(null);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -47,11 +46,11 @@ const ProductDetail: React.FC = () => {
     try {
       const res = await productApi.toggleFavorite(product.id);
       setIsFavorite(res);
-      alert(res ? '已收藏' : '已取消收藏');
+      Taro.showToast({ title: res ? '已收藏' : '已取消收藏', icon: 'none' });
     } catch (error) {
       console.error('Failed to toggle favorite', error);
-      alert('请先登录');
-      navigate('/login');
+      Taro.showToast({ title: '请先登录', icon: 'none' });
+      Taro.navigateTo({ url: '/pages/Login/index' });
     }
   };
 
@@ -59,11 +58,11 @@ const ProductDetail: React.FC = () => {
     if (!product) return;
     try {
       await cartApi.addToCart(product.id, quantity);
-      alert('已加入购物车');
+      Taro.showToast({ title: '已加入购物车', icon: 'success' });
     } catch (error) {
       console.error('Failed to add to cart', error);
-      alert('请先登录');
-      navigate('/login');
+      Taro.showToast({ title: '请先登录', icon: 'none' });
+      Taro.navigateTo({ url: '/pages/Login/index' });
     }
   };
 
@@ -71,11 +70,11 @@ const ProductDetail: React.FC = () => {
     if (!product) return;
     try {
       await cartApi.addToCart(product.id, quantity);
-      navigate('/checkout');
+      Taro.navigateTo({ url: '/pages/Checkout/index' });
     } catch (error) {
       console.error('Failed to pre-order', error);
-      alert('请先登录');
-      navigate('/login');
+      Taro.showToast({ title: '请先登录', icon: 'none' });
+      Taro.navigateTo({ url: '/pages/Login/index' });
     }
   };
 
@@ -86,23 +85,23 @@ const ProductDetail: React.FC = () => {
     <div className="bg-gray-50 min-h-screen pb-24">
       {/* Top Bar */}
       <div className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between p-4">
-        <button 
-          onClick={() => navigate(-1)}
+        <button
+          onClick={() => Taro.navigateBack()}
           className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white"
         >
-          <ChevronLeft size={24} />
+          <span className="text-xl text-white">←</span>
         </button>
         <div className="flex gap-2">
           <button className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
-            <Share2 size={20} />
+            <span className="text-lg">📤</span>
           </button>
         </div>
       </div>
 
       {/* Image Gallery */}
       <div className="w-full aspect-square bg-white">
-        <img 
-          src={product.mainImage || 'https://picsum.photos/seed/product/800/800'} 
+        <img
+          src={product.mainImage || 'https://picsum.photos/seed/product/800/800'}
           alt={product.name}
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"
@@ -159,33 +158,33 @@ const ProductDetail: React.FC = () => {
       {/* Detail Section */}
       <div className="mt-4 bg-white p-6">
         <h3 className="font-bold text-gray-800 mb-4">商品详情</h3>
-        <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: product.detail || '暂无详情' }} />
+        <RichText nodes={product.detail || '暂无详情'} />
       </div>
 
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex items-center gap-4 z-50">
         <div className="flex gap-4 px-2">
           <button className="flex flex-col items-center gap-1 text-gray-500">
-            <MessageSquare size={20} />
+            <span className="text-lg">💬</span>
             <span className="text-[10px]">客服</span>
           </button>
           <button onClick={handleToggleFavorite} className={`flex flex-col items-center gap-1 ${isFavorite ? 'text-red-500' : 'text-gray-500'}`}>
-            <Heart size={20} className={isFavorite ? 'fill-current text-red-500' : ''} />
+            <span className={`text-lg ${isFavorite ? 'text-red-500' : ''}`}>♡</span>
             <span className="text-[10px]">收藏</span>
           </button>
-          <button onClick={() => navigate('/cart')} className="flex flex-col items-center gap-1 text-gray-500 relative">
-            <ShoppingCart size={20} />
+          <button onClick={() => Taro.switchTab({ url: '/pages/Cart/index' })} className="flex flex-col items-center gap-1 text-gray-500 relative">
+            <span className="text-lg">🛒</span>
             <span className="text-[10px]">购物车</span>
           </button>
         </div>
         <div className="flex-1 flex gap-2">
-          <button 
+          <button
             onClick={handleAddToCart}
             className="flex-1 bg-emerald-50 text-emerald-700 py-3 rounded-full font-bold text-sm"
           >
             加入购物车
           </button>
-          <button 
+          <button
             onClick={handleBuyNow}
             className="flex-1 bg-emerald-600 text-white py-3 rounded-full font-bold text-sm shadow-lg shadow-emerald-200"
           >

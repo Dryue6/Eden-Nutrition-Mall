@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Bell, ChevronRight, ArrowUp, Heart } from 'lucide-react';
+import Taro, { usePageScroll } from '@tarojs/taro';
+import { View, Text } from '@tarojs/components';
 import { productApi } from '@/src/api';
 import { ProductVO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
-import { motion } from 'motion/react';
 
 const Home: React.FC = () => {
   const [hotProducts, setHotProducts] = useState<ProductVO[]>([]);
@@ -31,24 +30,22 @@ const Home: React.FC = () => {
       }
     };
     fetchData();
-
-    const handleScroll = () => {
-      if (window.scrollY > 300) {
-        setShowBackToTop(true);
-      } else {
-        setShowBackToTop(false);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  usePageScroll((res) => {
+    if (res.scrollTop > 300) {
+      setShowBackToTop(true);
+    } else {
+      setShowBackToTop(false);
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6 p-4">
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{fontSize: '18px'}}>🔍</span>
           <input
             type="text"
             placeholder="搜索营养补剂..."
@@ -56,7 +53,7 @@ const Home: React.FC = () => {
           />
         </div>
         <button className="p-2 bg-white rounded-full shadow-sm text-gray-600">
-          <Bell size={20} />
+          🔔
         </button>
       </header>
 
@@ -69,9 +66,9 @@ const Home: React.FC = () => {
             立即抢购
           </button>
         </div>
-        <img 
-          src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800" 
-          alt="Banner" 
+        <img
+          src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800"
+          alt="Banner"
           className="w-full h-full object-cover mix-blend-overlay"
           referrerPolicy="no-referrer"
         />
@@ -89,9 +86,12 @@ const Home: React.FC = () => {
             key={i}
             onClick={() => {
               if (item.id === 'hot-products' || item.id === 'new-products') {
-                document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
+                Taro.pageScrollTo({
+                  selector: `#${item.id}`,
+                  duration: 300
+                });
               } else {
-                alert('后端接口预留，功能开发中，敬请期待！');
+                Taro.showToast({ title: '后端接口预留，功能开发中', icon: 'none' });
               }
             }}
             className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity outline-none"
@@ -108,9 +108,9 @@ const Home: React.FC = () => {
       <section id="hot-products">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-800">热门排行</h3>
-          <Link to="/category" className="text-xs text-emerald-600 flex items-center gap-0.5">
-            更多 <ChevronRight size={14} />
-          </Link>
+          <View onClick={() => Taro.switchTab({ url: '/pages/Category/index' })} className="text-xs text-emerald-600 flex items-center gap-0.5">
+            更多 <span className="text-xs">›</span>
+          </View>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {Array.isArray(hotProducts) && hotProducts.map((product) => (
@@ -123,9 +123,9 @@ const Home: React.FC = () => {
       <section id="new-products">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-800">新品上市</h3>
-          <Link to="/category" className="text-xs text-emerald-600 flex items-center gap-0.5">
-            更多 <ChevronRight size={14} />
-          </Link>
+          <View onClick={() => Taro.switchTab({ url: '/pages/Category/index' })} className="text-xs text-emerald-600 flex items-center gap-0.5">
+            更多 <span className="text-xs">›</span>
+          </View>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {Array.isArray(newProducts) && newProducts.map((product) => (
@@ -149,10 +149,10 @@ const Home: React.FC = () => {
       {/* Back to Top */}
       {showBackToTop && (
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => Taro.pageScrollTo({ scrollTop: 0, duration: 300 })}
           className="fixed right-4 bottom-20 p-3 bg-white text-emerald-600 rounded-full shadow-lg border border-gray-100 z-50 hover:bg-emerald-50 transition-colors"
         >
-          <ArrowUp size={24} />
+          <span className="text-xl">↑</span>
         </button>
       )}
     </div>
@@ -175,20 +175,16 @@ const ProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
   }, [product.id]);
 
   return (
-    <motion.div 
-      whileHover={{ y: -4 }}
-      className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-50 relative"
-    >
+    <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-50 relative">
       <div className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm">
-        <Heart size={14} className={isFavorite ? 'fill-current text-red-500' : 'text-gray-400'} />
+        <span className={cn("text-sm", isFavorite ? 'text-red-500' : 'text-gray-400')}>♡</span>
       </div>
-      <Link to={`/product/${product.id}`}>
+      <View onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${product.id}` })}>
         <div className="aspect-square bg-gray-100 overflow-hidden">
-          <img 
-            src={product.mainImage || 'https://picsum.photos/seed/nutrition/400/400'} 
+          <img
+            src={product.mainImage || 'https://picsum.photos/seed/nutrition/400/400'}
             alt={product.name}
             className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
           />
         </div>
         <div className="p-3">
@@ -204,8 +200,8 @@ const ProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
             </span>
           </div>
         </div>
-      </Link>
-    </motion.div>
+      </View>
+    </div>
   );
 };
 

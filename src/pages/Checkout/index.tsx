@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import Taro from '@tarojs/taro';
+import { View } from '@tarojs/components';
 import { cartApi, addressApi, orderApi, couponApi } from '@/src/api';
 import { CartVO, UserAddress, UserCoupon } from '@/src/api/types';
 import { formatPrice } from '@/src/lib/utils';
-import { ChevronRight, MapPin, Ticket, ShieldCheck, ChevronLeft } from 'lucide-react';
 
 const Checkout: React.FC = () => {
-  const navigate = useNavigate();
   const [cart, setCart] = useState<CartVO | null>(null);
   const [address, setAddress] = useState<UserAddress | null>(null);
   const [coupons, setCoupons] = useState<UserCoupon[]>([]);
@@ -33,37 +32,34 @@ const Checkout: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleCreateOrder = async () => {
+  const handleCheckout = async () => {
     if (!address) {
-      alert('请选择收货地址');
-      return;
-    }
-
-    const items = cart?.cartItems || (cart as any)?.items || [];
-    const selectedItems = items.filter((i: any) => i.selected);
-
-    if (selectedItems.length === 0) {
-      alert('购物车没有选中的商品');
+      Taro.showToast({ title: '请选择收货地址', icon: 'none' });
       return;
     }
 
     try {
+      const selectedItems = (cart?.cartItems || (cart as any)?.items || []).filter((i: any) => i.selected);
+
+      if (selectedItems.length === 0) {
+        Taro.showToast({ title: '购物车没有选中的商品', icon: 'none' });
+        return;
+      }
+
       const order = await orderApi.createOrder({
         addressId: address.id,
         userCouponId: selectedCoupon?.userCouponId || null,
         productIds: selectedItems.map((i: any) => i.productId || i.id),
         remark: ""
       });
-      // After creation, redirect to pay or order detail
-      // Direct to order detail with the new order's ID
-      navigate(`/order/${order.orderNo}`);
+      Taro.redirectTo({ url: `/pages/OrderDetail/index?orderNo=${order.orderNo}` });
     } catch (error) {
       console.error('Failed to create order', error);
-      alert('下单失败');
+      Taro.showToast({ title: '下单失败', icon: 'none' });
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-gray-500">加载中...</div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">加载中...</div>;
 
   const items = cart?.cartItems || (cart as any)?.items || [];
 
@@ -80,19 +76,22 @@ const Checkout: React.FC = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
-      <header className="bg-white p-4 sticky top-0 z-10 flex items-center gap-4 shadow-sm">
-        <button onClick={() => navigate(-1)}><ChevronLeft size={24} /></button>
+      {/* Top Bar */}
+      <div className="bg-white p-4 sticky top-0 z-10 flex items-center shadow-sm">
+        <button onClick={() => Taro.navigateBack()} className="text-gray-600 mr-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-50">
+          <span className="text-2xl">←</span>
+        </button>
         <h1 className="text-lg font-bold text-gray-800">确认订单</h1>
-      </header>
+      </div>
 
       <div className="p-4 space-y-4">
-        {/* Address Section */}
-        <div 
-          onClick={() => navigate('/address')}
-          className="bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-50 cursor-pointer"
+        {/* Address Card */}
+        <div
+          onClick={() => Taro.navigateTo({ url: '/pages/AddressList/index' })}
+          className="bg-white rounded-2xl p-4 shadow-sm flex items-center relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer"
         >
           <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
-            <MapPin size={20} />
+            <span className="text-xl">📍</span>
           </div>
           <div className="flex-1">
             {address ? (
@@ -109,7 +108,7 @@ const Checkout: React.FC = () => {
               <span className="text-sm text-gray-400 font-medium">请选择收货地址</span>
             )}
           </div>
-          <ChevronRight size={18} className="text-gray-300" />
+          <span className="text-gray-300 text-lg">›</span>
         </div>
 
         {/* Product List */}
@@ -118,9 +117,9 @@ const Checkout: React.FC = () => {
           <div className="space-y-4">
             {items.filter((i: any) => i.selected).map((item: any) => (
               <div key={item.productId} className="flex gap-3">
-                <img 
-                  src={item.productMainImage || 'https://picsum.photos/seed/product/100/100'} 
-                  className="w-16 h-16 rounded-lg object-cover" 
+                <img
+                  src={item.productMainImage || 'https://picsum.photos/seed/product/100/100'}
+                  className="w-16 h-16 rounded-lg object-cover"
                   referrerPolicy="no-referrer"
                 />
                 <div className="flex-1 flex flex-col justify-between py-0.5">
@@ -138,14 +137,14 @@ const Checkout: React.FC = () => {
         {/* Coupon Section */}
         <div className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-50">
           <div className="flex items-center gap-2">
-            <Ticket size={20} className="text-orange-500" />
+            <span className="text-xl text-orange-500">🎫</span>
             <span className="text-sm font-medium text-gray-700">优惠券</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-xs text-orange-500 font-bold">
               {selectedCoupon ? `-${formatPrice(selectedCoupon.value)}` : `${coupons.length}张可用`}
             </span>
-            <ChevronRight size={16} className="text-gray-300" />
+            <span className="text-gray-300 text-lg">›</span>
           </div>
         </div>
 
@@ -166,7 +165,7 @@ const Checkout: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 py-4">
-          <ShieldCheck size={14} />
+          <span className="text-sm">🛡</span>
           <span>伊甸园营养品商城 · 官方自营正品保障</span>
         </div>
       </div>
@@ -177,8 +176,8 @@ const Checkout: React.FC = () => {
           <span className="text-xs text-gray-400">实付</span>
           <span className="text-xl font-bold text-emerald-600">{formatPrice(finalAmount)}</span>
         </div>
-        <button 
-          onClick={handleCreateOrder}
+        <button
+          onClick={handleCheckout}
           className="bg-emerald-600 text-white px-10 py-3 rounded-full font-bold shadow-lg shadow-emerald-100"
         >
           立即下单

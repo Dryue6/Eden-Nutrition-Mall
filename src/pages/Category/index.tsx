@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Heart } from 'lucide-react';
+import Taro from '@tarojs/taro';
+import { View, Image } from '@tarojs/components';
 import { categoryApi, productApi } from '@/src/api';
 import { CategoryTreeVO, ProductVO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
@@ -53,8 +53,8 @@ const Category: React.FC = () => {
             onClick={() => setActiveCategory(cat.id)}
             className={cn(
               "w-full py-4 px-2 text-xs font-medium transition-all relative",
-              activeCategory === cat.id 
-                ? "bg-white text-emerald-600" 
+              activeCategory === cat.id
+                ? "bg-white text-emerald-600"
                 : "text-gray-500 hover:text-emerald-500"
             )}
           >
@@ -73,7 +73,7 @@ const Category: React.FC = () => {
             <div className="flex items-center justify-center h-40 text-gray-400 text-xs">加载中...</div>
           ) : products.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-xs gap-2">
-              <Filter size={24} className="opacity-20" />
+              <span className="text-2xl opacity-20">☰</span>
               暂无商品
             </div>
           ) : (
@@ -105,25 +105,25 @@ const CategoryProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
   }, [product.id]);
 
   return (
-    <Link
-      to={`/product/${product.id}`}
-      className="flex gap-3 bg-white p-2 rounded-xl border border-gray-50 shadow-sm relative"
+    <View
+      onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${product.id}` })}
+      className="bg-white rounded-xl p-2 flex flex-col gap-2 relative shadow-sm border border-gray-50 cursor-pointer"
     >
-      <div className="absolute top-2 right-2 z-10">
-        <Heart size={14} className={isFavorite ? 'fill-current text-red-500' : 'text-gray-300'} />
+      <div className="absolute top-2 right-2 z-10 p-1 bg-white/80 backdrop-blur rounded-full">
+        <span className={cn("text-sm", isFavorite ? 'text-red-500' : 'text-gray-400')}>♡</span>
       </div>
-      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+      <div className="w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
         <img
-          src={product.mainImage || 'https://picsum.photos/seed/nutrition/200/200'}
+          src={product.mainImage || 'https://picsum.photos/seed/product/200/200'}
           alt={product.name}
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"
         />
       </div>
-      <div className="flex flex-col justify-between py-1 w-full pr-6">
-        <h4 className="text-sm font-medium text-gray-800 line-clamp-2">
+      <div className="flex flex-col flex-1 pb-1">
+        <h3 className="text-xs font-medium text-gray-800 line-clamp-2 mb-1 flex-1">
           {product.name}
-        </h4>
+        </h3>
         <div className="flex items-baseline gap-2">
           <span className="text-emerald-600 font-bold text-sm">
             {formatPrice(product.price)}
@@ -133,7 +133,7 @@ const CategoryProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
           </span>
         </div>
       </div>
-    </Link>
+    </View>
   );
 };
 

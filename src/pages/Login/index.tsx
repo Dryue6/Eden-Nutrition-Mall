@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import Taro from '@tarojs/taro';
 import { userApi } from '@/src/api';
-import { User, Lock, Phone, ArrowRight } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const res = await userApi.login({ username, password });
-      localStorage.setItem('token', res.token);
-      navigate('/');
+      Taro.setStorageSync('token', res.token);
+      Taro.switchTab({ url: '/pages/Home/index' });
     } catch (error) {
       console.error('Login failed', error);
-      alert('登录失败，请检查用户名和密码，确保当前账号为普通用户账号');
+      Taro.showToast({ title: '登录失败，确保账号为普通用户账号', icon: 'none', duration: 2000 });
     } finally {
       setLoading(false);
     }
@@ -35,7 +33,7 @@ const Login: React.FC = () => {
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 ml-1">用户名</label>
           <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" style={{fontSize: '20px'}}>👤</span>
             <input
               type="text"
               value={username}
@@ -51,7 +49,7 @@ const Login: React.FC = () => {
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 ml-1">密码</label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" style={{fontSize: '20px'}}>🔒</span>
             <input
               type="password"
               value={password}
@@ -74,14 +72,16 @@ const Login: React.FC = () => {
           className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50"
         >
           {loading ? '登录中...' : '立即登录'}
-          {!loading && <ArrowRight size={20} />}
+          {!loading && <span className="text-lg">→</span>}
         </button>
       </form>
 
-      <div className="mt-auto pt-8 text-center">
+      <div className="mt-auto text-center pb-8 flex flex-col gap-4">
         <p className="text-sm text-gray-500">
-          还没有账号？ 
-          <button onClick={() => navigate('/register')} className="text-emerald-600 font-bold ml-1">立即注册</button>
+          还没有账号？{' '}
+          <span onClick={() => Taro.navigateTo({ url: '/pages/Register/index' })} className="text-emerald-600 font-bold cursor-pointer hover:underline">
+            立即注册
+          </span>
         </p>
       </div>
     </div>
