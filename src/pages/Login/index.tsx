@@ -16,7 +16,7 @@ const Login: React.FC = () => {
       Taro.switchTab({ url: '/pages/Home/index' });
     } catch (error) {
       console.error('Login failed', error);
-      Taro.showToast({ title: '登录失败，确保账号为普通用户账号', icon: 'none', duration: 2000 });
+      Taro.showToast({ title: '登录失败，确保账号为普通用户账号，同时检查网络情况', icon: 'none', duration: 5000 });
     } finally {
       setLoading(false);
     }

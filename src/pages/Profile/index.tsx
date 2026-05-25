@@ -1,26 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { userApi } from '@/src/api';
 import { UserVO } from '@/src/api/types';
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<UserVO | null>(null);
+  const [points, setPoints] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUser = async () => {
+  const fetchUser = async () => {
+    try {
+      const data = await userApi.getUserInfo();
+      setUser(data);
       try {
-        const data = await userApi.getUserInfo();
-        setUser(data);
-      } catch (error) {
-        console.error('Failed to fetch user info', error);
-        Taro.navigateTo({ url: '/pages/Login/index' });
-      } finally {
-        setLoading(false);
+        const pts = await userApi.getPoints();
+        setPoints(pts);
+      } catch (e) {
+        console.error('Failed to fetch points', e);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch user info', error);
+      Taro.navigateTo({ url: '/pages/Login/index' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchUser();
   }, []);
+
+  useDidShow(() => {
+    if (!loading) {
+      fetchUser();
+    }
+  });
 
   const handleLogout = async () => {
     try {
@@ -61,6 +75,7 @@ const Profile: React.FC = () => {
           <div className="text-white">
             <h2 className="text-lg font-bold">{user?.nickname || user?.username}</h2>
             <p className="text-xs opacity-80">{user?.phone || '未绑定手机号'}</p>
+            <p className="text-xs mt-1 bg-white/20 inline-block px-2 py-0.5 rounded-full">积分: {points}</p>
           </div>
         </div>
       </div>

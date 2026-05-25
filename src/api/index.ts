@@ -20,6 +20,9 @@ export const userApi = {
   changePassword: (data: any) => request.put('/user/password', data),
   checkUsername: (username: string) => request.get<any, boolean>(`/user/check/username?username=${username}`),
   checkPhone: (phone: string) => request.get<any, boolean>(`/user/check/phone?phone=${phone}`),
+  signIn: () => request.post<any, any>('/user/sign'),
+  checkSignIn: () => request.get<any, boolean>('/user/sign/check'),
+  getPoints: () => request.get<any, number>('/user/points'),
 };
 
 // Address Module

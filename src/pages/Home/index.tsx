@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Taro, { usePageScroll } from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
-import { productApi } from '@/src/api';
+
+import { productApi, userApi } from '@/src/api';
 import { ProductVO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
 
@@ -11,6 +12,8 @@ const Home: React.FC = () => {
   const [newProducts, setNewProducts] = useState<ProductVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [hasSignedIn, setHasSignedIn] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -20,16 +23,31 @@ const Home: React.FC = () => {
           productApi.getRecommendProducts(),
           productApi.getNewProducts(),
         ]);
-        setHotProducts(hot);
-        setRecommendProducts(recommend);
-        setNewProducts(latest);
+        // 兼容后端返回数组格式或者分页对象格式，避免因为不是数组导致不渲染
+        setHotProducts(Array.isArray(hot) ? hot : (hot as any)?.records || []);
+        setRecommendProducts(Array.isArray(recommend) ? recommend : (recommend as any)?.records || []);
+        setNewProducts(Array.isArray(latest) ? latest : (latest as any)?.records || []);
       } catch (error) {
         console.error('Failed to fetch home data', error);
       } finally {
         setLoading(false);
       }
     };
+
+    const checkSignInStatus = async () => {
+      const token = Taro.getStorageSync('token');
+      if (token) {
+        try {
+          const signedIn = await userApi.checkSignIn();
+          setHasSignedIn(signedIn);
+        } catch (e) {
+          console.error('Check sign in failed', e);
+        }
+      }
+    };
+
     fetchData();
+    checkSignInStatus();
   }, []);
 
   usePageScroll((res) => {
@@ -77,29 +95,57 @@ const Home: React.FC = () => {
       {/* Quick Actions */}
       <section className="grid grid-cols-4 gap-4 text-center">
         {[
-          { label: '热门排行', icon: '🔥', color: 'bg-orange-50', id: 'hot-products' },
+          { label: '热门排行', icon: '🔥', color: 'bg-orange-50', id: 'hot-products'},
           { label: '新品上市', icon: '🆕', color: 'bg-blue-50', id: 'new-products' },
           { label: '领券中心', icon: '🎫', color: 'bg-red-50', id: 'coupon' },
-          { label: '每日签到', icon: '📅', color: 'bg-emerald-50', id: 'checkin' },
+          { label: hasSignedIn ? '今日已签' : '每日签到', icon: '📅', color: hasSignedIn ? 'bg-gray-100 text-gray-400' : 'bg-emerald-50', id: 'checkin', disabled: hasSignedIn },
         ].map((item, i) => (
           <button
             key={i}
-            onClick={() => {
+            disabled={item.disabled || (item.id === 'checkin' && isSigningIn)}
+            onClick={async () => {
               if (item.id === 'hot-products' || item.id === 'new-products') {
                 Taro.pageScrollTo({
                   selector: `#${item.id}`,
                   duration: 300
                 });
+              } else if (item.id === 'checkin') {
+                const token = Taro.getStorageSync('token');
+                if (!token) {
+                  Taro.navigateTo({ url: '/pages/Login/index' });
+                  return;
+                }
+                if (hasSignedIn || isSigningIn) return;
+
+                setIsSigningIn(true);
+                Taro.showLoading({ title: '签到中...' });
+                try {
+                  await userApi.signIn();
+                  setHasSignedIn(true);
+                  const points = await userApi.getPoints();
+                  Taro.hideLoading();
+                  Taro.showModal({
+                    title: '签到成功',
+                    content: `积分 +10\n当前总积分：${points}`,
+                    showCancel: false,
+                    confirmText: '好的'
+                  });
+                } catch (e: any) {
+                  Taro.hideLoading();
+                  Taro.showToast({ title: e?.message || '签到失败', icon: 'none' });
+                } finally {
+                  setIsSigningIn(false);
+                }
               } else {
                 Taro.showToast({ title: '后端接口预留，功能开发中', icon: 'none' });
               }
             }}
-            className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity outline-none"
+            className={cn("flex flex-col items-center gap-2 hover:opacity-80 transition-opacity outline-none", item.disabled && "opacity-50 hover:opacity-50")}
           >
             <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-sm", item.color)}>
               {item.icon}
             </div>
-            <span className="text-[11px] font-medium text-gray-600">{item.label}</span>
+            <span className="text-[16px] font-medium text-gray-600">{item.label}</span>
           </button>
         ))}
       </section>
@@ -195,7 +241,7 @@ const ProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
             <span className="text-emerald-600 font-bold text-base">
               {formatPrice(product.price)}
             </span>
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[16px] text-gray-400">
               已售 {product.sales}
             </span>
           </div>
