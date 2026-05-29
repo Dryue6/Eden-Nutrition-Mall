@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { orderApi } from '@/src/api';
 import { Order } from '@/src/api/types';
+import { startAlipaySandboxPayment } from '@/src/lib/alipay';
 import { formatPrice, formatDate, cn } from '@/src/lib/utils';
 
 const OrderDetail: React.FC = () => {
@@ -44,10 +45,10 @@ const OrderDetail: React.FC = () => {
   const handlePayOrder = async () => {
     if (!order) return;
     try {
-      await orderApi.payOrder(order.orderNo, 1);
-      Taro.showToast({ title: '支付成功', icon: 'success' });
-      const data = await orderApi.getOrderDetail(order.orderNo);
-      setOrder(data);
+      const started = await startAlipaySandboxPayment(order.orderNo);
+      if (started) {
+        Taro.showToast({ title: '正在跳转支付宝沙箱', icon: 'none' });
+      }
     } catch (error) {
       console.error('Failed to pay order', error);
     }

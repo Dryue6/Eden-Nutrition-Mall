@@ -100,6 +100,12 @@ export interface OrderItem {
   totalPrice: number;
 }
 
+export interface AlipayDebugPayVO {
+  bridgeUrl: string;
+  expireSeconds: number;
+  orderNo: string;
+}
+
 // Coupon
 export interface Coupon {
   id: number;
@@ -126,11 +132,24 @@ export interface SeckillSessionDTO {
 }
 
 export interface SeckillProduct extends ProductVO {
-  seckillId: number;
+  seckillId?: number;
   seckillPrice: number;
-  seckillStock: number;
+  seckillStock?: number;
+  stockCount?: number;
   startTime: string;
   endTime: string;
+  productId?: number;
+}
+
+export interface SeckillSubmitVO {
+  orderNo: string;
+  status: 'PROCESSING';
+}
+
+export interface SeckillResultVO {
+  status: 'PROCESSING' | 'SUCCESS' | 'FAILED';
+  orderNo: string;
+  message: string;
 }
 
 // Review

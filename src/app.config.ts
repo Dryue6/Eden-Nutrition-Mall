@@ -11,7 +11,8 @@ export default defineAppConfig({
     'pages/Checkout/index',
     'pages/AddressList/index',
     'pages/OrderList/index',
-    'pages/OrderDetail/index'
+    'pages/OrderDetail/index',
+    'pages/AlipayDebugPay/index'
   ],
   window: {
     backgroundTextStyle: 'light',

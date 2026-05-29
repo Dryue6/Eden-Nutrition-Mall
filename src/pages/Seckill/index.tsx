@@ -1,15 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import Taro from '@tarojs/taro';
-import { View, Image } from '@tarojs/components';
-import { seckillApi } from '@/src/api';
-import { SeckillSessionDTO, SeckillProduct } from '@/src/api/types';
+import { View } from '@tarojs/components';
+import { addressApi, seckillApi } from '@/src/api';
+import { SeckillSessionDTO, SeckillProduct, UserAddress } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
 
 const Seckill: React.FC = () => {
   const [sessions, setSessions] = useState<SeckillSessionDTO[]>([]);
   const [activeSession, setActiveSession] = useState<number | null>(null);
   const [products, setProducts] = useState<SeckillProduct[]>([]);
+  const [defaultAddress, setDefaultAddress] = useState<UserAddress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processingSeckillId, setProcessingSeckillId] = useState<number | null>(null);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const data = await seckillApi.getSeckillList();
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to fetch seckill products', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -27,28 +41,78 @@ const Seckill: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
+    const fetchDefaultAddress = async () => {
+      const token = Taro.getStorageSync('token');
+      if (!token) return;
       try {
-        const data = await seckillApi.getSeckillList();
-        setProducts(data);
+        const data = await addressApi.getDefault();
+        setDefaultAddress(data);
       } catch (error) {
-        console.error('Failed to fetch seckill products', error);
-      } finally {
-        setLoading(false);
+        console.warn('Failed to fetch default address', error);
       }
     };
+    fetchDefaultAddress();
+  }, []);
+
+  useEffect(() => {
     fetchProducts();
   }, [activeSession]);
 
-  const handleDoSeckill = async (seckillId: number) => {
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const waitForSeckillResult = async (orderNo: string): Promise<string | null> => {
+    for (let i = 0; i < 20; i++) {
+      await wait(500);
+      const result = await seckillApi.getSeckillResult(orderNo);
+      if (result.status === 'SUCCESS') {
+        return result.orderNo;
+      }
+      if (result.status === 'FAILED') {
+        throw new Error(result.message || '秒杀失败，请重试');
+      }
+    }
+    return null;
+  };
+
+  const handleDoSeckill = async (product: SeckillProduct) => {
+    const seckillId = product.seckillId ?? product.id;
+    if (!seckillId) {
+      Taro.showToast({ title: '秒杀活动异常，请刷新重试', icon: 'none' });
+      return;
+    }
+
+    const token = Taro.getStorageSync('token');
+    if (!token) {
+      Taro.navigateTo({ url: '/pages/Login/index' });
+      return;
+    }
+
+    // 秒杀接口会直接创建订单，前端必须带上可用的默认收货地址。
+    if (!defaultAddress?.id) {
+      Taro.showToast({ title: '请先设置默认收货地址', icon: 'none' });
+      Taro.navigateTo({ url: '/pages/AddressList/index' });
+      return;
+    }
+
     try {
-      const orderNo = await seckillApi.doSeckill({ seckillId });
-      Taro.showToast({ title: '秒杀成功！去支付', icon: 'success' });
-      Taro.navigateTo({ url: `/pages/Checkout/index` });
-    } catch (error) {
+      setProcessingSeckillId(seckillId);
+      Taro.showLoading({ title: '排队中...' });
+      const submit = await seckillApi.doSeckill({ seckillId, addressId: defaultAddress.id });
+      const orderNo = await waitForSeckillResult(submit.orderNo);
+      Taro.hideLoading();
+      if (orderNo) {
+        Taro.showToast({ title: '秒杀成功！去支付', icon: 'success' });
+        Taro.navigateTo({ url: `/pages/OrderDetail/index?orderNo=${encodeURIComponent(orderNo)}` });
+      } else {
+        Taro.showToast({ title: '订单处理中，请稍后在订单列表查看', icon: 'none', duration: 2500 });
+      }
+    } catch (error: any) {
+      Taro.hideLoading();
       console.error('Seckill failed', error);
-      Taro.showToast({ title: '秒杀失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '秒杀失败，请重试', icon: 'none' });
+      fetchProducts();
+    } finally {
+      setProcessingSeckillId(null);
     }
   };
 
@@ -56,8 +120,7 @@ const Seckill: React.FC = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <header className="bg-gradient-to-r from-red-600 to-orange-500 pt-12 pb-20 px-6 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
+      <header className="pt-12 pb-20 px-6 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to right, #dc2626, #f97316)' }}>
         <div className="flex items-center gap-2 mb-2 relative z-10">
           <span className="text-2xl">⚡</span>
           <h1 className="text-2xl font-bold italic">限时秒杀</h1>
@@ -79,7 +142,7 @@ const Seckill: React.FC = () => {
               )}
             >
               <span className="text-sm font-bold">{session.name}</span>
-              <span className="text-[10px] opacity-80">
+              <span className="text-[16px] opacity-80">
                 {session.status === 1 ? '进行中' : '即将开始'}
               </span>
             </button>
@@ -94,10 +157,16 @@ const Seckill: React.FC = () => {
           <div className="text-center py-20 text-gray-400">暂无秒杀商品</div>
         ) : (
           products.map((product) => {
-            const progress = Math.min(100, Math.floor(((product.seckillStock - product.stock) / product.seckillStock) * 100));
+            const seckillId = product.seckillId ?? product.id;
+            const initialStock = product.seckillStock ?? product.stockCount ?? product.stock ?? 0;
+            const remainingStock = product.stockCount ?? product.stock ?? product.seckillStock ?? 0;
+            const progress = initialStock > 0
+              ? Math.min(100, Math.max(0, Math.floor(((initialStock - remainingStock) / initialStock) * 100)))
+              : 0;
+            const detailId = product.productId ?? product.id;
             return (
-              <div key={product.id} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
-                <View onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${product.productId}` })} className="w-28 h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer">
+              <div key={seckillId} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
+                <View onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${detailId}` })} className="w-28 h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer">
                   <img
                     src={'https://picsum.photos/seed/seckill/200/200'}
                     alt={'秒杀商品'}
@@ -106,7 +175,7 @@ const Seckill: React.FC = () => {
                 </View>
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
-                    <h4 className="text-sm font-bold text-gray-800 line-clamp-2 mb-2">{product.name}</h4>
+                    <h4 className="text-sm font-bold text-gray-800 line-clamp-2 mb-2">{product.name || '秒杀商品'}</h4>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
@@ -114,7 +183,7 @@ const Seckill: React.FC = () => {
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-gray-400">剩余{product.seckillStock}件</span>
+                      <span className="text-[10px] text-gray-400">剩余{remainingStock}件</span>
                     </div>
                   </div>
                   <div className="flex items-end justify-between">
@@ -123,10 +192,14 @@ const Seckill: React.FC = () => {
                       <span className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</span>
                     </div>
                     <button
-                      onClick={() => handleDoSeckill(product.seckillId)}
-                      className="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-md shadow-red-100"
+                      onClick={() => handleDoSeckill(product)}
+                      disabled={processingSeckillId === seckillId}
+                      className={cn(
+                        "text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-md shadow-red-100",
+                        processingSeckillId === seckillId ? "bg-gray-400" : "bg-red-600"
+                      )}
                     >
-                      立即抢购
+                      {processingSeckillId === seckillId ? '处理中' : '立即抢购'}
                     </button>
                   </div>
                 </div>
