@@ -166,15 +166,15 @@ const ProductDetail: React.FC = () => {
         <div className="flex gap-4 px-2">
           <button className="flex flex-col items-center gap-1 text-gray-500">
             <span className="text-lg">💬</span>
-            <span className="text-[10px]">客服</span>
+            <span className="text-[16px]">客服</span>
           </button>
           <button onClick={handleToggleFavorite} className={`flex flex-col items-center gap-1 ${isFavorite ? 'text-red-500' : 'text-gray-500'}`}>
             <span className={`text-lg ${isFavorite ? 'text-red-500' : ''}`}>♡</span>
-            <span className="text-[10px]">收藏</span>
+            <span className="text-[16px]">收藏</span>
           </button>
           <button onClick={() => Taro.switchTab({ url: '/pages/Cart/index' })} className="flex flex-col items-center gap-1 text-gray-500 relative">
             <span className="text-lg">🛒</span>
-            <span className="text-[10px]">购物车</span>
+            <span className="text-[16px]">购物车</span>
           </button>
         </div>
         <div className="flex-1 flex gap-2">

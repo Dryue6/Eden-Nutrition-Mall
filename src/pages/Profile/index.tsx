@@ -59,7 +59,7 @@ const Profile: React.FC = () => {
         <div className="flex items-center justify-between mb-8 relative z-10">
           <h1 className="text-white text-xl font-bold">个人中心</h1>
           <button className="text-white/80 hover:text-white">
-            <span className="text-xl">⚙</span>
+            <span className="text-xl right-0">⚙</span>
           </button>
         </div>
 
@@ -103,7 +103,7 @@ const Profile: React.FC = () => {
                 className="flex flex-col items-center gap-2 relative cursor-pointer"
               >
                 <div className="text-gray-400 text-xl">{item.icon}</div>
-                <span className="text-[11px] font-medium text-gray-600">{item.label}</span>
+                <span className="text-[20px] font-medium text-gray-600">{item.label}</span>
                 <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1/2 h-1 bg-emerald-600 rounded-full" />
               </div>
             ))}

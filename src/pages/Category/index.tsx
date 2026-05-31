@@ -103,7 +103,7 @@ const Category: React.FC = () => {
                     key={subCat.id}
                     onClick={() => setActiveSubCategory(subCat.id)}
                     className={cn(
-                      "w-full py-2.5 pl-6 pr-2 !text-[18px] text-left transition-all",
+                      "w-full py-2.5 pl-6 pr-2 !text-[20px] text-left transition-all",
                       activeSubCategory === subCat.id
                         ? "text-emerald-600 font-bold"
                         : "text-gray-400 hover:text-emerald-500"
@@ -181,10 +181,10 @@ const CategoryProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
           <span className="text-emerald-600 font-bold text-sm">
             {formatPrice(product.price)}
           </span>
-          <span className="text-[14px] text-gray-400">
+        </div>
+        <span className="text-[20px] text-gray-400">
             销量 {product.sales}
           </span>
-        </div>
       </div>
     </View>
   );

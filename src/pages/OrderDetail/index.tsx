@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { orderApi } from '@/src/api';
 import { Order } from '@/src/api/types';
 import { startAlipaySandboxPayment } from '@/src/lib/alipay';
@@ -10,25 +10,36 @@ const OrderDetail: React.FC = () => {
   const orderNo = router?.params?.orderNo;
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+
+  /**
+   * 支付回调依赖后端异步通知，页面重新显示时也要刷新订单，避免仍展示待支付状态。
+   */
+  const fetchDetail = async (silent = false) => {
+    if (!orderNo) return;
+    if (!silent) setLoading(true);
+    try {
+      const data = await orderApi.getOrderDetail(orderNo);
+      setOrder(data);
+    } catch (error) {
+      console.error('Failed to fetch order detail', error);
+      Taro.showToast({ title: '没有找到该订单', icon: 'none' });
+      setTimeout(() => Taro.navigateBack(), 1500);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (orderNo) {
-      const fetchDetail = async () => {
-        try {
-          const data = await orderApi.getOrderDetail(orderNo);
-          setOrder(data);
-        } catch (error) {
-          console.error('Failed to fetch order detail', error);
-          Taro.showToast({ title: '没有找到该订单', icon: 'none' });
-          setTimeout(() => Taro.navigateBack(), 1500);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchDetail();
-    }
+    fetchDetail();
   }, [orderNo]);
+
+  useDidShow(() => {
+    if (orderNo && !loading) {
+      setPaying(false);
+      fetchDetail(true);
+    }
+  });
 
   const handleCancelOrder = async () => {
     if (!order) return;
@@ -43,7 +54,8 @@ const OrderDetail: React.FC = () => {
   };
 
   const handlePayOrder = async () => {
-    if (!order) return;
+    if (!order || paying) return;
+    setPaying(true);
     try {
       const started = await startAlipaySandboxPayment(order.orderNo);
       if (started) {
@@ -51,6 +63,9 @@ const OrderDetail: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to pay order', error);
+      Taro.showToast({ title: '支付遇到问题', icon: 'none' });
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -184,7 +199,13 @@ const OrderDetail: React.FC = () => {
       {order.status === 0 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
           <button onClick={handleCancelOrder} className="px-6 py-2 rounded-full border border-gray-200 text-gray-500 text-sm font-medium">取消订单</button>
-          <button onClick={handlePayOrder} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">立即支付</button>
+          <button
+            disabled={paying}
+            onClick={handlePayOrder}
+            className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100 disabled:opacity-60"
+          >
+            {paying ? '正在发起...' : '支付宝沙箱支付'}
+          </button>
         </div>
       )}
       {order.status === 1 && (

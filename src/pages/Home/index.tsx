@@ -145,7 +145,7 @@ const Home: React.FC = () => {
             <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-sm", item.color)}>
               {item.icon}
             </div>
-            <span className="text-[16px] font-medium text-gray-600">{item.label}</span>
+            <span className="text-[20px] font-medium text-gray-600">{item.label}</span>
           </button>
         ))}
       </section>
@@ -241,7 +241,7 @@ const ProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
             <span className="text-emerald-600 font-bold text-base">
               {formatPrice(product.price)}
             </span>
-            <span className="text-[16px] text-gray-400">
+            <span className="text-[20px] text-gray-400">
               已售 {product.sales}
             </span>
           </div>

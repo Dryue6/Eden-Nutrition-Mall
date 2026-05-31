@@ -102,6 +102,7 @@ export interface OrderItem {
 
 export interface AlipayDebugPayVO {
   bridgeUrl: string;
+  externalPayUrl?: string;
   expireSeconds: number;
   orderNo: string;
 }

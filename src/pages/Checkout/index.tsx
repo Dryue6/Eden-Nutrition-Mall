@@ -164,7 +164,7 @@ const Checkout: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 py-4">
+        <div className="flex items-center justify-center gap-2 text-[20px] text-gray-400 py-4">
           <span className="text-sm">🛡</span>
           <span>伊甸园营养品商城 · 官方自营正品保障</span>
         </div>

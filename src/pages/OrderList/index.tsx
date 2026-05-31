@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { orderApi } from '@/src/api';
 import { Order } from '@/src/api/types';
 import { startAlipaySandboxPayment } from '@/src/lib/alipay';
@@ -10,9 +10,13 @@ const OrderList: React.FC = () => {
   const status = router?.params?.status;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [payingOrderNo, setPayingOrderNo] = useState<string | null>(null);
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  /**
+   * 支付后返回订单列表时重新拉取数据，确保异步通知更新后的状态能及时反映到列表。
+   */
+  const fetchOrders = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await orderApi.getOrderList({
         status: status ? Number(status) : undefined,
@@ -30,6 +34,13 @@ const OrderList: React.FC = () => {
   useEffect(() => {
     fetchOrders();
   }, [status]);
+
+  useDidShow(() => {
+    if (!loading) {
+      setPayingOrderNo(null);
+      fetchOrders(true);
+    }
+  });
 
   const getStatusInfo = (status: number) => {
     switch (status) {
@@ -53,6 +64,8 @@ const OrderList: React.FC = () => {
   };
 
   const handlePay = async (orderNo: string) => {
+    if (payingOrderNo) return;
+    setPayingOrderNo(orderNo);
     try {
       const started = await startAlipaySandboxPayment(orderNo);
       if (started) {
@@ -61,6 +74,8 @@ const OrderList: React.FC = () => {
     } catch (error) {
       console.error(error);
       Taro.showToast({ title: '支付遇到问题', icon: 'none' });
+    } finally {
+      setPayingOrderNo(null);
     }
   };
 
@@ -136,13 +151,14 @@ const OrderList: React.FC = () => {
                 {order.status === 0 && (
                   <>
                     <button
+                      disabled={payingOrderNo === order.orderNo}
                       onClick={(e) => {
                         e.stopPropagation();
                         handlePay(order.orderNo);
                       }}
-                      className="px-4 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold"
+                      className="px-4 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold disabled:opacity-60"
                     >
-                      立即支付
+                      {payingOrderNo === order.orderNo ? '发起中' : '沙箱支付'}
                     </button>
                     <button
                       onClick={(e) => {

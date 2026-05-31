@@ -53,6 +53,8 @@ npm run build:weapp
 - 后端 API 地址: `http://localhost:8080/api`（配置在 `src/api/request.ts` 的 `REAL_BACKEND_URL`）
 - 开发时需确保后端服务已运行
 - 微信小程序生产环境需配置合法域名白名单，本地开发勾选「不校验合法域名」即可
+- 支付宝沙箱支付仅用于微信开发者工具调试：小程序端会通过后端 bridge 页面和 `WebView` 打开支付宝沙箱收银台，不接入微信支付，也不保证真机或正式发布版可用
+- 调试支付宝沙箱前需确认后端 `.env` 中 `ALIPAY_NOTIFY_URL`、`ALIPAY_RETURN_URL`、`ALIPAY_WEAPP_DEBUG_BRIDGE_BASE_URL` 均指向当前有效公网域名
 
 ### 项目结构说明
 

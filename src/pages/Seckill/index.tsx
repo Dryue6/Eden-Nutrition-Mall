@@ -142,7 +142,7 @@ const Seckill: React.FC = () => {
               )}
             >
               <span className="text-sm font-bold">{session.name}</span>
-              <span className="text-[16px] opacity-80">
+              <span className="text-[24px] opacity-80">
                 {session.status === 1 ? '进行中' : '即将开始'}
               </span>
             </button>
@@ -183,13 +183,13 @@ const Seckill: React.FC = () => {
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-gray-400">剩余{remainingStock}件</span>
+                      <span className="text-[20px] text-gray-400">剩余{remainingStock}件</span>
                     </div>
                   </div>
                   <div className="flex items-end justify-between">
                     <div className="flex flex-col">
                       <span className="text-red-600 font-bold text-lg">{formatPrice(product.seckillPrice)}</span>
-                      <span className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</span>
+                      {/*<span className="text-[20px] text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>*/}
                     </div>
                     <button
                       onClick={() => handleDoSeckill(product)}
