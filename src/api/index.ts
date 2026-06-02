@@ -10,6 +10,14 @@ import {
   SeckillSessionDTO, SeckillProduct, SeckillResultVO, SeckillSubmitVO
 } from './types';
 
+/** 将后端 @RequestParam 风格接口需要的参数拼接到 URL，避免 PUT 请求体参数无法绑定。 */
+const withQuery = (url: string, params: Record<string, string | number | boolean>) => {
+  const query = Object.entries(params)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  return `${url}?${query}`;
+};
+
 // User Module
 export const userApi = {
   register: (data: any) => request.post('/user/register', data),
@@ -40,12 +48,12 @@ export const addressApi = {
 export const cartApi = {
   getCart: () => request.get<any, CartVO>('/cart'),
   addToCart: (productId: number, quantity: number) => request.post('/cart/add', { productId, quantity }),
-  updateQuantity: (productId: number, quantity: number) => request.put('/cart/quantity', { productId, quantity }),
+  updateQuantity: (productId: number, quantity: number) => request.put(withQuery('/cart/quantity', { productId, quantity })),
   removeFromCart: (productId: number) => request.delete(`/cart/${productId}`),
   clearCart: () => request.delete('/cart/clear'),
   getCartItemCount: () => request.get<any, number>('/cart/count'),
-  selectItem: (productId: number, selected: boolean) => request.put('/cart/select', { productId, selected }),
-  selectAll: (selected: boolean) => request.put('/cart/selectAll', { selected }),
+  selectItem: (productId: number, selected: boolean) => request.put(withQuery('/cart/select', { productId, selected })),
+  selectAll: (selected: boolean) => request.put(withQuery('/cart/selectAll', { selected })),
 };
 
 // Category Module

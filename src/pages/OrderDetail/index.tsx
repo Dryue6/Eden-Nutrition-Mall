@@ -101,8 +101,8 @@ const OrderDetail: React.FC = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
-      {/* Top Bar */}
-      <div className="bg-emerald-600 p-4 sticky top-0 z-10 flex items-center shadow-sm text-white">
+      {/* 状态栏跟随页面自然滚动，避免与下方订单内容卡片层叠重叠。 */}
+      <div className="bg-emerald-600 p-4 flex items-center shadow-sm text-white">
         <button onClick={() => Taro.navigateBack()} className="text-white mr-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-emerald-500">
           <span className="text-2xl text-white">←</span>
         </button>
@@ -117,7 +117,7 @@ const OrderDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 -mt-10 relative z-20 space-y-4">
+      <div className="px-4 mt-4 space-y-4">
         {/* Status Steps */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50">
           <div className="flex justify-between relative">
@@ -208,7 +208,7 @@ const OrderDetail: React.FC = () => {
           </button>
         </div>
       )}
-      {order.status === 1 && (
+      {order.status === 2 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
           <button onClick={handleConfirmReceive} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">确认收货</button>
         </div>
