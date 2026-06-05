@@ -84,19 +84,7 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
       {/* Top Bar */}
-      <div className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between p-4">
-        <button
-          onClick={() => Taro.navigateBack()}
-          className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white"
-        >
-          <span className="text-xl text-white">←</span>
-        </button>
-        <div className="flex gap-2">
-          <button className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
-            <span className="text-lg">📤</span>
-          </button>
-        </div>
-      </div>
+
 
       {/* Image Gallery */}
       <div className="w-full aspect-square bg-white">

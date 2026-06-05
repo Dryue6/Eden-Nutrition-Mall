@@ -92,12 +92,8 @@ const OrderList: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
       {/* Top Bar */}
-      <div className="bg-white p-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
-        <button onClick={() => Taro.navigateBack()} className="text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-50">
-          <span className="text-2xl">←</span>
-        </button>
+      <div className="bg-white py-4 sticky top-0 z-10 relative flex items-center justify-center shadow-sm">
         <h1 className="text-lg font-bold text-gray-800">全部订单</h1>
-        <div className="w-8" />
       </div>
 
       <div className="p-4 space-y-4">
@@ -113,7 +109,7 @@ const OrderList: React.FC = () => {
               onClick={() => Taro.navigateTo({ url: `/pages/OrderDetail/index?orderNo=${order.orderNo}` })}
             >
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
-                <span className="text-[10px] text-gray-400 font-mono">单号: {order.orderNo}</span>
+                <span className="text-[20px] text-gray-400 font-mono">单号: {order.orderNo}</span>
                 <div className={cn("flex items-center gap-1 text-xs font-bold", getStatusInfo(order.status).color)}>
                   <span>{getStatusInfo(order.status).icon}</span>
                   {getStatusInfo(order.status).label}
@@ -140,7 +136,7 @@ const OrderList: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <span className="text-[10px] text-gray-400">{formatDate(order.createTime)}</span>
+                <span className="text-[20px] text-gray-400">{formatDate(order.createTime)}</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xs text-gray-500">实付</span>
                   <span className="text-base font-bold text-emerald-600">{formatPrice(order.payAmount)}</span>

@@ -1,15 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import Taro from '@tarojs/taro';
-import { View } from '@tarojs/components';
+import React, { useState } from 'react';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { cartApi } from '@/src/api';
-import { CartVO } from '@/src/api/types';
+import { CartItemVO, CartVO } from '@/src/api/types';
 import { formatPrice } from '@/src/lib/utils';
+
+type CartDisplayItem = CartItemVO & { id?: number };
 
 const Cart: React.FC = () => {
   const [cart, setCart] = useState<CartVO | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * 拉取最新购物车数据；购物车是 tab 页面，必须在页面重新显示时刷新缓存状态。
+   */
   const fetchCart = async () => {
+    setLoading(true);
     try {
       const data = await cartApi.getCart();
       setCart(data);
@@ -20,12 +25,18 @@ const Cart: React.FC = () => {
     }
   };
 
-  useEffect(() => {
+  useDidShow(() => {
     fetchCart();
-  }, []);
+  });
 
-  const handleUpdateQuantity = async (productId: number, quantity: number) => {
-    if (quantity < 1) return;
+  /** 统一从后端真实 productId 或历史兼容 id 中取得购物车操作所需商品 ID。 */
+  const getProductId = (item: CartDisplayItem) => item.productId ?? item.id;
+
+  /**
+   * 更新购物车数量：允许数量扣减到 0，由后端复用 quantity <= 0 的移除逻辑。
+   */
+  const handleUpdateQuantity = async (productId: number | undefined, quantity: number) => {
+    if (productId === undefined || quantity < 0) return;
     try {
       await cartApi.updateQuantity(productId, quantity);
       fetchCart();
@@ -34,7 +45,8 @@ const Cart: React.FC = () => {
     }
   };
 
-  const handleRemove = async (productId: number) => {
+  const handleRemove = async (productId: number | undefined) => {
+    if (productId === undefined) return;
     try {
       await cartApi.removeFromCart(productId);
       fetchCart();
@@ -44,7 +56,8 @@ const Cart: React.FC = () => {
     }
   };
 
-  const handleSelect = async (productId: number, selected: boolean) => {
+  const handleSelect = async (productId: number | undefined, selected: boolean) => {
+    if (productId === undefined) return;
     try {
       await cartApi.selectItem(productId, selected);
       fetchCart();
@@ -68,7 +81,13 @@ const Cart: React.FC = () => {
 
   if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-140px)] text-gray-500">加载中...</div>;
 
-  const items = cart?.cartItems || (cart as any)?.items || [];
+  const items: CartDisplayItem[] = cart?.items || cart?.cartItems || [];
+  const selectedAmount = cart?.selectedAmount ?? items
+    .filter((item) => item.selected)
+    .reduce((sum, item) => {
+      const price = item.price ?? item.productPrice ?? 0;
+      return sum + ((item.subtotal ?? item.totalPrice) ?? price * item.quantity);
+    }, 0);
 
   if (!items || items.length === 0) {
     return (
@@ -96,13 +115,15 @@ const Cart: React.FC = () => {
       </header>
 
       <div className="p-4 space-y-4">
-        {Array.isArray(items) && items.map((item: any) => (
-          <div key={item.productId || item.id} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
+        {Array.isArray(items) && items.map((item) => {
+          const productId = getProductId(item);
+          return (
+          <div key={productId} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
             <div className="flex items-center">
               <input
                 type="checkbox"
                 checked={item.selected}
-                onChange={(e) => handleSelect(item.productId || item.id, e.target.checked)}
+                onChange={(e) => handleSelect(productId, e.target.checked)}
                 className="w-5 h-5 rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500"
               />
             </div>
@@ -116,30 +137,31 @@ const Cart: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-gray-900 text-sm mb-1 truncate">{item.productName}</h3>
-              <p className="text-emerald-600 font-bold mb-2">{formatPrice(item.price || item.productPrice)}</p>
+              <p className="text-emerald-600 font-bold mb-2">{formatPrice(item.price ?? item.productPrice ?? 0)}</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
                   <button
-                    onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}
+                    onClick={() => handleUpdateQuantity(productId, item.quantity - 1)}
                     className="w-6 h-6 flex items-center justify-center text-gray-500 bg-white rounded-md shadow-sm"
                   >
                     <span className="text-sm font-bold">−</span>
                   </button>
                   <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
                   <button
-                    onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
+                    onClick={() => handleUpdateQuantity(productId, item.quantity + 1)}
                     className="w-6 h-6 flex items-center justify-center text-gray-500 bg-white rounded-md shadow-sm"
                   >
                     <span className="text-sm font-bold">+</span>
                   </button>
                 </div>
-                <button onClick={() => handleRemove(item.productId || item.id)} className="text-gray-300 hover:text-red-500">
+                <button onClick={() => handleRemove(productId)} className="text-gray-300 hover:text-red-500">
                   <span className="text-lg">🗑</span>
                 </button>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Bottom Bar */}
@@ -155,8 +177,8 @@ const Cart: React.FC = () => {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-[10px] text-gray-400">合计</p>
-            <p className="text-lg font-bold text-emerald-600">{formatPrice(cart?.selectedAmount || items.filter((i: any) => i.selected).reduce((sum: number, i: any) => sum + ((i.price || i.productPrice) * i.quantity), 0))}</p>
+            <p className="text-[20px] text-gray-400">合计</p>
+            <p className="text-lg font-bold text-emerald-600">{formatPrice(selectedAmount)}</p>
           </div>
           <button
             onClick={handleCheckout}

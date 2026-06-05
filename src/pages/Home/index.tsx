@@ -1,61 +1,98 @@
-import React, { useEffect, useState } from 'react';
-import Taro, { usePageScroll } from '@tarojs/taro';
-import { View, Text } from '@tarojs/components';
+import React, { useState } from 'react';
+import Taro, { useDidShow } from '@tarojs/taro';
+import { View } from '@tarojs/components';
 
-import { productApi, userApi } from '@/src/api';
-import { ProductVO } from '@/src/api/types';
+import { productApi, seckillApi, userApi } from '@/src/api';
+import { ProductVO, SeckillSessionDTO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
+
+const EMPTY_SECKILL_BANNER_TEXT = '暂无秒杀活动';
+const HOME_PRODUCT_LIMIT = 4;
+
+/** 根据秒杀场次状态生成首页 Banner 文案，status=1 代表当前正在进行的活动。 */
+const resolveSeckillBannerText = (sessions: SeckillSessionDTO[]) => {
+  const activeSession = sessions.find((session) => session.status === 1);
+  if (!activeSession) {
+    return EMPTY_SECKILL_BANNER_TEXT;
+  }
+
+  // 优先展示后端维护的活动描述；没有描述时退回到活动名称，避免 Banner 空白。
+  return activeSession.description?.trim() || activeSession.name?.trim() || EMPTY_SECKILL_BANNER_TEXT;
+};
 
 const Home: React.FC = () => {
   const [hotProducts, setHotProducts] = useState<ProductVO[]>([]);
   const [recommendProducts, setRecommendProducts] = useState<ProductVO[]>([]);
   const [newProducts, setNewProducts] = useState<ProductVO[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [seckillBannerText, setSeckillBannerText] = useState(EMPTY_SECKILL_BANNER_TEXT);
   const [hasSignedIn, setHasSignedIn] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [hot, recommend, latest] = await Promise.all([
-          productApi.getHotProducts(),
-          productApi.getRecommendProducts(),
-          productApi.getNewProducts(),
-        ]);
-        // 兼容后端返回数组格式或者分页对象格式，避免因为不是数组导致不渲染
-        setHotProducts(Array.isArray(hot) ? hot : (hot as any)?.records || []);
-        setRecommendProducts(Array.isArray(recommend) ? recommend : (recommend as any)?.records || []);
-        setNewProducts(Array.isArray(latest) ? latest : (latest as any)?.records || []);
-      } catch (error) {
-        console.error('Failed to fetch home data', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  /** 兼容首页商品接口可能返回数组或分页 records 的两种结构。 */
+  const normalizeProductList = (value: ProductVO[] | { records?: ProductVO[] }) => {
+    return Array.isArray(value) ? value : value?.records || [];
+  };
 
-    const checkSignInStatus = async () => {
-      const token = Taro.getStorageSync('token');
-      if (token) {
-        try {
-          const signedIn = await userApi.checkSignIn();
-          setHasSignedIn(signedIn);
-        } catch (e) {
-          console.error('Check sign in failed', e);
-        }
-      }
-    };
-
-    fetchData();
-    checkSignInStatus();
-  }, []);
-
-  usePageScroll((res) => {
-    if (res.scrollTop > 300) {
-      setShowBackToTop(true);
-    } else {
-      setShowBackToTop(false);
+  /** 拉取首页公开商品数据，失败时清空对应区域，避免展示过期商品。 */
+  const fetchHomeProducts = async () => {
+    try {
+      const [hot, recommend, latest] = await Promise.all([
+        // 首页只展示首屏精选商品，限制每组数量，避免进入首页时产生过多渲染和后续请求。
+        productApi.getHotProducts(HOME_PRODUCT_LIMIT),
+        productApi.getRecommendProducts(HOME_PRODUCT_LIMIT),
+        productApi.getNewProducts(HOME_PRODUCT_LIMIT),
+      ]);
+      // 兼容后端返回数组格式或者分页对象格式，避免因为不是数组导致不渲染。
+      setHotProducts(normalizeProductList(hot as ProductVO[] | { records?: ProductVO[] }));
+      setRecommendProducts(normalizeProductList(recommend as ProductVO[] | { records?: ProductVO[] }));
+      setNewProducts(normalizeProductList(latest as ProductVO[] | { records?: ProductVO[] }));
+    } catch (error) {
+      console.error('Failed to fetch home products', error);
+      setHotProducts([]);
+      setRecommendProducts([]);
+      setNewProducts([]);
     }
+  };
+
+  /** 拉取当前秒杀活动文案，没有活动或请求失败时展示统一空态。 */
+  const fetchSeckillBannerText = async () => {
+    try {
+      const sessions = await seckillApi.getSeckillSessions();
+      setSeckillBannerText(resolveSeckillBannerText(Array.isArray(sessions) ? sessions : []));
+    } catch (error) {
+      console.error('Failed to fetch seckill sessions for home banner', error);
+      setSeckillBannerText(EMPTY_SECKILL_BANNER_TEXT);
+    }
+  };
+
+  /** 仅在已登录时检查签到状态，未登录不发鉴权请求以保证首页公开内容独立加载。 */
+  const checkSignInStatus = async () => {
+    const token = Taro.getStorageSync('token');
+    if (!token) {
+      // 未登录时保持签到入口为可点击状态，但不发鉴权请求，避免影响首页公开数据加载。
+      setHasSignedIn(false);
+      return;
+    }
+
+    try {
+      const signedIn = await userApi.checkSignIn();
+      setHasSignedIn(signedIn);
+    } catch (e) {
+      console.error('Check sign in failed', e);
+      setHasSignedIn(false);
+    }
+  };
+
+  /** 首页 tab 每次展示时刷新首屏数据，确保点击首页能看到实际网络请求。 */
+  const loadHomeData = () => {
+    // 首页是 tabBar 页面，使用 Taro 页面展示生命周期确保每次进入首页都会触发首屏请求。
+    fetchHomeProducts();
+    fetchSeckillBannerText();
+    checkSignInStatus();
+  };
+
+  useDidShow(() => {
+    loadHomeData();
   });
 
   return (
@@ -78,11 +115,16 @@ const Home: React.FC = () => {
       {/* Banner Placeholder */}
       <section className="w-full h-40 bg-emerald-600 rounded-2xl overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-700/50 to-transparent flex flex-col justify-center p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">春季营养季</h2>
-          <p className="text-sm opacity-90">全场满299减50</p>
-          <button className="mt-3 bg-white text-emerald-700 px-4 py-1.5 rounded-full text-xs font-bold w-fit">
-            立即抢购
-          </button>
+          <h2 className="text-xl font-bold mb-1">限时秒杀</h2>
+          <p className="text-sm opacity-90">{seckillBannerText}</p>
+          {seckillBannerText !== EMPTY_SECKILL_BANNER_TEXT && (
+            <button
+              onClick={() => Taro.switchTab({ url: '/pages/Seckill/index' })}
+              className="mt-3 bg-white text-emerald-700 px-4 py-1.5 rounded-full text-xs font-bold w-fit"
+            >
+              立即抢购
+            </button>
+          )}
         </div>
         <img
           src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800"
@@ -191,39 +233,16 @@ const Home: React.FC = () => {
           ))}
         </div>
       </section>
-
-      {/* Back to Top */}
-      {showBackToTop && (
-        <button
-          onClick={() => Taro.pageScrollTo({ scrollTop: 0, duration: 300 })}
-          className="fixed right-4 bottom-20 p-3 bg-white text-emerald-600 rounded-full shadow-lg border border-gray-100 z-50 hover:bg-emerald-50 transition-colors"
-        >
-          <span className="text-xl">↑</span>
-        </button>
-      )}
     </div>
   );
 };
 
 const ProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
-
-  useEffect(() => {
-    const checkFav = async () => {
-      try {
-        const fav = await productApi.checkFavorite(product.id);
-        setIsFavorite(fav);
-      } catch (e) {
-        // Ignore if not logged in
-      }
-    };
-    checkFav();
-  }, [product.id]);
-
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-50 relative">
       <div className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm">
-        <span className={cn("text-sm", isFavorite ? 'text-red-500' : 'text-gray-400')}>♡</span>
+        {/* 首页卡片不拉取收藏状态，避免每个商品额外触发一次鉴权请求影响页面切换。 */}
+        <span className="text-sm text-gray-400">♡</span>
       </div>
       <View onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${product.id}` })}>
         <div className="aspect-square bg-gray-100 overflow-hidden">

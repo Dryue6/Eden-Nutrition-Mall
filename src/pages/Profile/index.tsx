@@ -1,14 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { userApi } from '@/src/api';
 import { UserVO } from '@/src/api/types';
+
+const LOGIN_PAGE_URL = '/pages/Login/index';
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<UserVO | null>(null);
   const [points, setPoints] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * 跳转登录页前检查当前页面，避免个人页反复显示时重复压入登录页。
+   */
+  const navigateToLogin = () => {
+    const pages = Taro.getCurrentPages();
+    const currentPage = pages[pages.length - 1];
+    if (currentPage?.route === 'pages/Login/index') return;
+    Taro.navigateTo({ url: LOGIN_PAGE_URL });
+  };
+
   const fetchUser = async () => {
+    const token = Taro.getStorageSync('token');
+    if (!token) {
+      // 未登录时不再依赖用户信息接口失败来触发跳转，保证点击个人页能立即进入登录页。
+      setUser(null);
+      setPoints(0);
+      setLoading(false);
+      navigateToLogin();
+      return;
+    }
+
     try {
       const data = await userApi.getUserInfo();
       setUser(data);
@@ -20,20 +42,19 @@ const Profile: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch user info', error);
-      Taro.navigateTo({ url: '/pages/Login/index' });
+      // 用户信息接口失败通常表示登录态失效，本地清理后重新进入登录流程。
+      Taro.removeStorageSync('token');
+      Taro.removeStorageSync('userInfo');
+      setUser(null);
+      setPoints(0);
+      navigateToLogin();
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
   useDidShow(() => {
-    if (!loading) {
-      fetchUser();
-    }
+    fetchUser();
   });
 
   const handleLogout = async () => {
@@ -41,7 +62,9 @@ const Profile: React.FC = () => {
       await userApi.logout();
       Taro.removeStorageSync('token');
       Taro.removeStorageSync('userInfo');
-      Taro.redirectTo({ url: '/pages/Login/index' });
+      setUser(null);
+      setPoints(0);
+      navigateToLogin();
     } catch (error) {
       console.error('Logout failed', error);
     }

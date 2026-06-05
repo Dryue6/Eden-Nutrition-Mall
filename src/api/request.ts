@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 const USE_MOCK = false;
 const REAL_BACKEND_URL = 'http://localhost:8080/api';
 const baseURL = REAL_BACKEND_URL;
+const LOGIN_PAGE_URL = '/pages/Login/index';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -21,6 +22,16 @@ function cleanParams(params?: Record<string, any>): Record<string, any> | undefi
     }
   }
   return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+}
+
+/**
+ * 统一处理登录失效跳转，使用 navigateTo 兼容从 tabBar 页面进入登录页的场景。
+ */
+function navigateToLogin() {
+  const pages = Taro.getCurrentPages();
+  const currentPage = pages[pages.length - 1];
+  if (currentPage?.route === 'pages/Login/index') return;
+  Taro.navigateTo({ url: LOGIN_PAGE_URL });
 }
 
 const request = async <T = any, R = any>(
@@ -45,10 +56,11 @@ const request = async <T = any, R = any>(
     if (result.code === 200 || result.success) {
       return result.data as R;
     }
-    if (result.code === 401) {
+    if (result.code === 401 || result.code === 403) {
+      // 401/403 在当前商城端都按登录态失效处理，避免仅提示失败而不进入登录流程。
       Taro.removeStorageSync('token');
       Taro.removeStorageSync('userInfo');
-      Taro.redirectTo({ url: '/pages/Login/index' });
+      navigateToLogin();
       return Promise.reject(new Error('Unauthorized'));
     }
     Taro.showToast({

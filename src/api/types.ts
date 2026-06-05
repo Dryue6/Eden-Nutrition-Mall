@@ -60,21 +60,33 @@ export interface ProductVO {
 }
 
 // Cart
+/** 后端购物车商品项 VO，保留少量旧字段兼容历史 mock/页面兜底数据。 */
 export interface CartItemVO {
   productId: number;
   productName: string;
-  productMainImage: string;
-  productPrice: number;
+  productImage: string;
+  price: number;
   quantity: number;
-  totalPrice: number;
   selected: boolean;
+  stock?: number;
+  totalPrice?: number;
+  subtotal?: number;
+  stockEnough?: boolean;
+  productStatus?: number;
+  productMainImage?: string;
+  productPrice?: number;
 }
 
+/** 后端购物车汇总 VO，items 是当前真实列表字段，cartItems 仅作为旧数据兼容。 */
 export interface CartVO {
-  cartItems: CartItemVO[];
-  totalAmount: number;
-  selectedAmount: number;
-  allSelected: boolean;
+  items: CartItemVO[];
+  cartItems?: CartItemVO[];
+  selectedCount?: number | null;
+  selectedAmount?: number | null;
+  totalCount?: number | null;
+  totalAmount?: number | null;
+  totalQuantity?: number | null;
+  allSelected?: boolean | null;
 }
 
 // Order
@@ -127,9 +139,13 @@ export interface UserCoupon extends Coupon {
 export interface SeckillSessionDTO {
   id: number;
   name: string;
+  /** 首页 Banner 优先展示的秒杀活动文案，后端未返回时使用 name 兜底。 */
+  description?: string;
   startTime: string;
   endTime: string;
   status: number;
+  /** 后端可读状态名称，仅用于展示兼容，不参与是否进行中的判断。 */
+  statusName?: string;
 }
 
 export interface SeckillProduct extends ProductVO {
