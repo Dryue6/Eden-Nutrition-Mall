@@ -1,8 +1,12 @@
 node_modules/
 build/
 dist/
+dist-weapp/
 coverage/
+.swc/
+.idea/
 .DS_Store
 *.log
 .env*
 !.env.example
+project.private.config.json

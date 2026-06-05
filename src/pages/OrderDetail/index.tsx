@@ -1,39 +1,51 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { orderApi } from '@/src/api';
 import { Order } from '@/src/api/types';
+import { startAlipaySandboxPayment } from '@/src/lib/alipay';
 import { formatPrice, formatDate, cn } from '@/src/lib/utils';
-import { ChevronLeft, MapPin, CreditCard, Package, Truck, CheckCircle } from 'lucide-react';
 
 const OrderDetail: React.FC = () => {
-  const { orderNo } = useParams<{ orderNo: string }>();
-  const navigate = useNavigate();
+  const router = Taro.getCurrentInstance().router;
+  const orderNo = router?.params?.orderNo;
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+
+  /**
+   * 支付回调依赖后端异步通知，页面重新显示时也要刷新订单，避免仍展示待支付状态。
+   */
+  const fetchDetail = async (silent = false) => {
+    if (!orderNo) return;
+    if (!silent) setLoading(true);
+    try {
+      const data = await orderApi.getOrderDetail(orderNo);
+      setOrder(data);
+    } catch (error) {
+      console.error('Failed to fetch order detail', error);
+      Taro.showToast({ title: '没有找到该订单', icon: 'none' });
+      setTimeout(() => Taro.navigateBack(), 1500);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (orderNo) {
-      const fetchDetail = async () => {
-        try {
-          const data = await orderApi.getOrderDetail(orderNo);
-          setOrder(data);
-        } catch (error) {
-          console.error('Failed to fetch order detail', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchDetail();
-    }
+    fetchDetail();
   }, [orderNo]);
+
+  useDidShow(() => {
+    if (orderNo && !loading) {
+      setPaying(false);
+      fetchDetail(true);
+    }
+  });
 
   const handleCancelOrder = async () => {
     if (!order) return;
     try {
       await orderApi.cancelOrder(order.orderNo);
-      alert('订单已取消');
-      // Refresh
+      Taro.showToast({ title: '订单已取消', icon: 'success' });
       const data = await orderApi.getOrderDetail(order.orderNo);
       setOrder(data);
     } catch (error) {
@@ -42,14 +54,18 @@ const OrderDetail: React.FC = () => {
   };
 
   const handlePayOrder = async () => {
-    if (!order) return;
+    if (!order || paying) return;
+    setPaying(true);
     try {
-      await orderApi.payOrder(order.orderNo, 1);
-      alert('支付成功');
-      const data = await orderApi.getOrderDetail(order.orderNo);
-      setOrder(data);
+      const started = await startAlipaySandboxPayment(order.orderNo);
+      if (started) {
+        Taro.showToast({ title: '正在跳转支付宝沙箱', icon: 'none' });
+      }
     } catch (error) {
       console.error('Failed to pay order', error);
+      Taro.showToast({ title: '支付遇到问题', icon: 'none' });
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -57,7 +73,7 @@ const OrderDetail: React.FC = () => {
     if (!order) return;
     try {
       await orderApi.confirmReceive(order.orderNo);
-      alert('已确认收货');
+      Taro.showToast({ title: '已确认收货', icon: 'success' });
       const data = await orderApi.getOrderDetail(order.orderNo);
       setOrder(data);
     } catch (error) {
@@ -65,34 +81,41 @@ const OrderDetail: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-gray-500">加载中...</div>;
-  if (!order) return <div className="flex items-center justify-center h-screen text-gray-500">订单不存在</div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">加载中...</div>;
+  if (!order) return <div className="flex flex-col items-center justify-center min-h-screen text-gray-500 gap-4">
+    <p>订单不存在</p>
+    <button onClick={() => Taro.navigateBack()} className="text-emerald-600 border border-emerald-600 px-4 py-1 rounded-full text-sm">返回</button>
+  </div>;
 
+  const currentStatus = order.status || 0;
   const steps = [
-    { label: '提交订单', icon: <Package size={16} />, active: true },
-    { label: '支付成功', icon: <CreditCard size={16} />, active: order.status >= 1 && order.status < 4 },
-    { label: '商家发货', icon: <Truck size={16} />, active: order.status >= 2 && order.status < 4 },
+    { label: '提交订单', icon: '📦', active: true },
+    { label: '支付成功', icon: '💳', active: currentStatus >= 1 && currentStatus < 4 },
+    { label: '商家发货', icon: '🚚', active: currentStatus >= 2 && currentStatus < 4 },
     {
-      label: order.status === 4 ? '已取消' : order.status === 5 ? '已退款' : '交易完成',
-      icon: <CheckCircle size={16} />,
-      active: order.status === 3 || order.status === 4 || order.status === 5
+      label: currentStatus === 4 ? '已取消' : '交易完成',
+      icon: '✓',
+      active: currentStatus === 3 || currentStatus === 4 || currentStatus === 5
     },
   ];
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
-      <header className="bg-emerald-600 pt-12 pb-20 px-6 text-white relative overflow-hidden">
-        <button onClick={() => navigate(-1)} className="absolute top-12 left-4 z-20"><ChevronLeft size={24} /></button>
-        <div className="flex flex-col items-center relative z-10">
-          <h1 className="text-xl font-bold mb-2">
-            {order.status === 0 ? '等待付款' : 
-             order.status === 1 ? '等待发货' :
-             order.status === 2 ? '等待收货' :
-             order.status === 3 ? '订单已完成' : '订单已取消'}
+      {/* Top Bar */}
+      <div className="bg-emerald-600 p-4 sticky top-0 z-10 flex items-center shadow-sm text-white">
+        <button onClick={() => Taro.navigateBack()} className="text-white mr-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-emerald-500">
+          <span className="text-2xl text-white">←</span>
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold">
+            {currentStatus === 0 ? '等待付款' :
+             currentStatus === 1 ? '等待发货' :
+             currentStatus === 2 ? '等待收货' :
+             currentStatus === 3 ? '订单已完成' : '订单已取消'}
           </h1>
-          <p className="text-xs opacity-80">订单编号: {order.orderNo}</p>
+          <p className="text-sm opacity-80">订单编号: {order.orderNo}</p>
         </div>
-      </header>
+      </div>
 
       <div className="px-4 -mt-10 relative z-20 space-y-4">
         {/* Status Steps */}
@@ -105,7 +128,7 @@ const OrderDetail: React.FC = () => {
                   "w-8 h-8 rounded-full flex items-center justify-center transition-all",
                   step.active ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-400"
                 )}>
-                  {step.icon}
+                  <span className="text-sm">{step.icon}</span>
                 </div>
                 <span className={cn("text-[10px] font-medium", step.active ? "text-emerald-600" : "text-gray-400")}>
                   {step.label}
@@ -117,7 +140,7 @@ const OrderDetail: React.FC = () => {
 
         {/* Address */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex gap-3">
-          <MapPin className="text-emerald-600 flex-shrink-0" size={20} />
+          <span className="text-xl text-emerald-600 flex-shrink-0">📍</span>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold text-gray-800">{order.receiverName}</span>
@@ -176,7 +199,13 @@ const OrderDetail: React.FC = () => {
       {order.status === 0 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
           <button onClick={handleCancelOrder} className="px-6 py-2 rounded-full border border-gray-200 text-gray-500 text-sm font-medium">取消订单</button>
-          <button onClick={handlePayOrder} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">立即支付</button>
+          <button
+            disabled={paying}
+            onClick={handlePayOrder}
+            className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100 disabled:opacity-60"
+          >
+            {paying ? '正在发起...' : '支付宝沙箱支付'}
+          </button>
         </div>
       )}
       {order.status === 1 && (

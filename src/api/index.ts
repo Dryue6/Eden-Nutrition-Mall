@@ -5,9 +5,9 @@ import {
   CartVO, 
   Category, CategoryTreeVO, 
   Coupon, UserCoupon,
-  Order, PageVO,
+  AlipayDebugPayVO, Order, PageVO,
   ProductVO, ProductReview,
-  SeckillSessionDTO, SeckillProduct
+  SeckillSessionDTO, SeckillProduct, SeckillResultVO, SeckillSubmitVO
 } from './types';
 
 // User Module
@@ -20,6 +20,9 @@ export const userApi = {
   changePassword: (data: any) => request.put('/user/password', data),
   checkUsername: (username: string) => request.get<any, boolean>(`/user/check/username?username=${username}`),
   checkPhone: (phone: string) => request.get<any, boolean>(`/user/check/phone?phone=${phone}`),
+  signIn: () => request.post<any, any>('/user/sign'),
+  checkSignIn: () => request.get<any, boolean>('/user/sign/check'),
+  getPoints: () => request.get<any, number>('/user/points'),
 };
 
 // Address Module
@@ -68,6 +71,8 @@ export const orderApi = {
   getOrderDetail: (id: number | string) => request.get<any, Order>(`/order/${id}`),
   cancelOrder: (id: number | string, reason?: string) => request.post(`/order/cancel/${id}`, { reason }),
   payOrder: (orderNo: string, payType: number = 1) => request.post(`/order/pay/${orderNo}?payType=${payType}`),
+  createAlipayPayment: (orderNo: string) => request.post<any, string>(`/order/pay/alipay/${orderNo}`),
+  createWeappDebugAlipayPayment: (orderNo: string) => request.post<any, AlipayDebugPayVO>(`/order/pay/alipay/weapp-debug/${orderNo}`),
   confirmReceive: (orderNo: string) => request.post(`/order/confirm/${orderNo}`),
   deleteOrder: (orderNo: string) => request.delete(`/order/${orderNo}`),
 };
@@ -98,6 +103,7 @@ export const seckillApi = {
   getOngoingSeckills: () => request.get<any, SeckillProduct[]>('/seckill/ongoing'),
   getUpcomingSeckills: () => request.get<any, SeckillProduct[]>('/seckill/upcoming'),
   getSeckillDetail: (seckillId: number) => request.get<any, SeckillProduct>(`/seckill/${seckillId}`),
-  doSeckill: (data: any) => request.post<any, string>('/seckill/do', data),
+  doSeckill: (data: any) => request.post<any, SeckillSubmitVO>('/seckill/do', data),
+  getSeckillResult: (orderNo: string) => request.get<any, SeckillResultVO>(`/seckill/result/${orderNo}`),
   checkKilled: (seckillId: number) => request.get<any, boolean>(`/seckill/check/${seckillId}`),
 };
