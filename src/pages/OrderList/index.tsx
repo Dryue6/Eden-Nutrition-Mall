@@ -47,8 +47,12 @@ const OrderList: React.FC = () => {
       case 0: return { label: '待付款', color: 'text-orange-500', icon: '🕐' };
       case 1: return { label: '待发货', color: 'text-blue-500', icon: '📦' };
       case 2: return { label: '待收货', color: 'text-emerald-500', icon: '🚚' };
-      case 3: return { label: '已完成', color: 'text-gray-500', icon: '✓' };
-      case 4: return { label: '已取消', color: 'text-gray-300', icon: '✕' };
+      case 3: return { label: '已收货', color: 'text-gray-500', icon: '✓' };
+      case 4: return { label: '已完成', color: 'text-gray-500', icon: '✓' };
+      case 5: return { label: '已取消', color: 'text-gray-300', icon: '✕' };
+      case 6: return { label: '退款中', color: 'text-orange-500', icon: '↩' };
+      case 7: return { label: '已退款', color: 'text-gray-500', icon: '↩' };
+      case 8: return { label: '退款拒绝', color: 'text-red-500', icon: '!' };
       default: return { label: '未知', color: 'text-gray-400', icon: '' };
     }
   };
@@ -126,6 +130,7 @@ const OrderList: React.FC = () => {
                     />
                     <div className="flex-1 flex flex-col justify-between py-0.5">
                       <h4 className="text-xs font-medium text-gray-800 line-clamp-1">{item.productName}</h4>
+                      {item.skuSpecName && <span className="text-[10px] text-gray-400">{item.skuSpecName}</span>}
                       <div className="flex justify-between items-end">
                         <span className="text-xs text-gray-400">x{item.quantity}</span>
                         <span className="text-sm font-bold text-gray-800">{formatPrice(item.currentUnitPrice || item.price)}</span>

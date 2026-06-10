@@ -63,7 +63,13 @@ const Login: React.FC = () => {
         </div>
 
         <div className="flex justify-end">
-          <button type="button" className="text-sm text-emerald-600 font-medium">忘记密码？</button>
+          <button
+            type="button"
+            onClick={() => Taro.navigateTo({ url: '/pages/ForgotPassword/index' })}
+            className="text-sm text-emerald-600 font-medium"
+          >
+            忘记密码？
+          </button>
         </div>
 
         <button

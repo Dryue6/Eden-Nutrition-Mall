@@ -17,8 +17,10 @@ export interface UserVO {
   username: string;
   nickname: string;
   phone: string;
+  email?: string;
   avatar: string;
   gender: number;
+  points?: number;
 }
 
 // Address
@@ -57,12 +59,27 @@ export interface ProductVO {
   stock: number;
   status: number;
   sales: number;
+  skuList?: ProductSku[];
+}
+
+export interface ProductSku {
+  id: number;
+  productId: number;
+  specName: string;
+  flavor?: string;
+  packageSize?: string;
+  price: number;
+  stock: number;
+  imageUrl?: string;
+  status: number;
 }
 
 // Cart
 /** 后端购物车商品项 VO，保留少量旧字段兼容历史 mock/页面兜底数据。 */
 export interface CartItemVO {
   productId: number;
+  skuId?: number;
+  skuSpecName?: string;
   productName: string;
   productImage: string;
   price: number;
@@ -95,7 +112,7 @@ export interface Order {
   orderNo: string;
   totalAmount: number;
   payAmount: number;
-  status: number; // 0-Unpaid, 1-Paid, 2-Shipped, 3-Completed, 4-Cancelled
+  status: number; // 0-待支付, 1-已支付, 2-已发货, 3-已收货, 4-已完成, 5-已取消, 6-退款中, 7-已退款, 8-退款拒绝
   receiverName: string;
   receiverPhone: string;
   receiverAddress: string;
@@ -105,11 +122,26 @@ export interface Order {
 
 export interface OrderItem {
   productId: number;
+  skuId?: number;
+  skuSpecName?: string;
   productName: string;
   productImage: string;
   currentUnitPrice: number;
   quantity: number;
   totalPrice: number;
+}
+
+export interface RefundApply {
+  id: number;
+  refundNo: string;
+  orderNo: string;
+  refundAmount: number;
+  reason: string;
+  status: number;
+  auditRemark?: string;
+  refundTradeNo?: string;
+  simulated?: number;
+  createTime: string;
 }
 
 export interface AlipayDebugPayVO {
@@ -174,9 +206,41 @@ export interface ProductReview {
   id: number;
   productId: number;
   userId: number;
-  nickname: string;
-  avatar: string;
+  nickname?: string;
+  avatar?: string;
   content: string;
   rating: number;
+  productName?: string;
+  productImage?: string;
   createTime: string;
+}
+
+export interface SupportSession {
+  id: number;
+  userId: number;
+  productId?: number | null;
+  status: number;
+  createTime: string;
+  updateTime: string;
+}
+
+export interface SupportMessage {
+  id: number;
+  sessionId: number;
+  senderType: 'USER' | 'STAFF' | 'SYSTEM';
+  content: string;
+  isRead: number;
+  createTime: string;
+}
+
+export interface Notice {
+  id: number;
+  userId: number;
+  type: 'ORDER' | 'COUPON' | 'SYSTEM' | string;
+  title: string;
+  content: string;
+  target?: string | null;
+  isRead: number;
+  createTime: string;
+  readTime?: string | null;
 }

@@ -6,8 +6,8 @@ import {
   Category, CategoryTreeVO, 
   Coupon, UserCoupon,
   AlipayDebugPayVO, Order, PageVO,
-  ProductVO, ProductReview,
-  SeckillSessionDTO, SeckillProduct, SeckillResultVO, SeckillSubmitVO
+  ProductVO, ProductReview, SupportMessage, SupportSession, Notice,
+  SeckillSessionDTO, SeckillProduct, SeckillResultVO, SeckillSubmitVO, RefundApply
 } from './types';
 
 /** 将后端 @RequestParam 风格接口需要的参数拼接到 URL，避免 PUT 请求体参数无法绑定。 */
@@ -25,7 +25,9 @@ export const userApi = {
   logout: () => request.post('/user/logout'),
   getUserInfo: () => request.get<any, UserVO>('/user/info'),
   updateUserInfo: (data: any) => request.put('/user/info', data),
-  changePassword: (data: any) => request.put('/user/password', data),
+  changePassword: (data: { oldPassword: string; newPassword: string }) => request.put(withQuery('/user/password', data)),
+  sendPasswordResetCode: (phone: string) => request.post('/user/password/reset-code', { phone }),
+  resetPassword: (data: { phone: string; code: string; newPassword: string }) => request.post('/user/password/reset', data),
   checkUsername: (username: string) => request.get<any, boolean>(`/user/check/username?username=${username}`),
   checkPhone: (phone: string) => request.get<any, boolean>(`/user/check/phone?phone=${phone}`),
   signIn: () => request.post<any, any>('/user/sign'),
@@ -47,12 +49,12 @@ export const addressApi = {
 // Cart Module
 export const cartApi = {
   getCart: () => request.get<any, CartVO>('/cart'),
-  addToCart: (productId: number, quantity: number) => request.post('/cart/add', { productId, quantity }),
-  updateQuantity: (productId: number, quantity: number) => request.put(withQuery('/cart/quantity', { productId, quantity })),
-  removeFromCart: (productId: number) => request.delete(`/cart/${productId}`),
+  addToCart: (productId: number, quantity: number, skuId?: number) => request.post('/cart/add', { productId, quantity, skuId }),
+  updateQuantity: (productId: number, quantity: number, skuId?: number) => request.put(withQuery('/cart/quantity', { productId, quantity, ...(skuId ? { skuId } : {}) })),
+  removeFromCart: (productId: number, skuId?: number) => request.delete(`/cart/${productId}${skuId ? `?skuId=${skuId}` : ''}`),
   clearCart: () => request.delete('/cart/clear'),
   getCartItemCount: () => request.get<any, number>('/cart/count'),
-  selectItem: (productId: number, selected: boolean) => request.put(withQuery('/cart/select', { productId, selected })),
+  selectItem: (productId: number, selected: boolean, skuId?: number) => request.put(withQuery('/cart/select', { productId, selected, ...(skuId ? { skuId } : {}) })),
   selectAll: (selected: boolean) => request.put(withQuery('/cart/selectAll', { selected })),
 };
 
@@ -85,6 +87,13 @@ export const orderApi = {
   deleteOrder: (orderNo: string) => request.delete(`/order/${orderNo}`),
 };
 
+// Refund Module
+export const refundApi = {
+  apply: (data: { orderNo: string; orderItemId?: number; refundAmount?: number; reason: string; images?: string }) =>
+    request.post<any, RefundApply>('/refund/apply', data),
+  my: (params: any) => request.get<any, PageVO<RefundApply>>('/refund/my', { params }),
+};
+
 // Product Module
 export const productApi = {
   getById: (id: number) => request.get<any, ProductVO>(`/product/${id}`),
@@ -101,7 +110,24 @@ export const productApi = {
 export const reviewApi = {
   getProductReviews: (productId: number, params: any) => request.get<any, PageVO<ProductReview>>(`/review/product/${productId}`, { params }),
   getReviewStats: (productId: number) => request.get<any, any>(`/review/product/${productId}/stats`),
+  getMyReviews: (params: any) => request.get<any, PageVO<ProductReview>>('/review/my', { params }),
   addReview: (data: any) => request.post('/review', data),
+  deleteReview: (reviewId: number) => request.delete(`/review/${reviewId}`),
+};
+
+// Support Module
+export const supportApi = {
+  getOrCreateSession: (productId?: number) => request.post<any, SupportSession>(productId ? `/support/session?productId=${productId}` : '/support/session'),
+  sendMessage: (data: { sessionId: number; content: string }) => request.post<any, SupportMessage>('/support/message', data),
+  listMessages: (sessionId: number) => request.get<any, SupportMessage[]>(`/support/messages?sessionId=${sessionId}`),
+};
+
+// Notice Module
+export const noticeApi = {
+  list: (params: any) => request.get<any, PageVO<Notice>>('/notice/list', { params }),
+  unreadCount: () => request.get<any, number>('/notice/unread-count'),
+  markRead: (id: number) => request.put(`/notice/read/${id}`),
+  markAllRead: () => request.put('/notice/read-all'),
 };
 
 // Seckill Module

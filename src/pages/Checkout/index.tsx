@@ -5,6 +5,23 @@ import { cartApi, addressApi, orderApi, couponApi } from '@/src/api';
 import { CartVO, UserAddress, UserCoupon } from '@/src/api/types';
 import { formatPrice } from '@/src/lib/utils';
 
+/** 按后端下单规则预估优惠金额：满减券直接减，折扣券按订单商品总额计算，未达门槛不抵扣。 */
+const resolveCouponDiscount = (totalAmount: number, coupon: UserCoupon | null) => {
+  if (!coupon || totalAmount < Number(coupon.minAmount || 0)) {
+    return 0;
+  }
+
+  if (coupon.type === 1) {
+    return Number(coupon.value || 0);
+  }
+
+  if (coupon.type === 2) {
+    return totalAmount * (1 - Number(coupon.value || 100) / 100);
+  }
+
+  return 0;
+};
+
 const Checkout: React.FC = () => {
   const [cart, setCart] = useState<CartVO | null>(null);
   const [address, setAddress] = useState<UserAddress | null>(null);
@@ -72,7 +89,8 @@ const Checkout: React.FC = () => {
     ? cart.selectedAmount
     : fallbackAmount;
 
-  const finalAmount = checkoutTotalDesc - (selectedCoupon?.value || 0);
+  const selectedCouponDiscount = resolveCouponDiscount(checkoutTotalDesc, selectedCoupon);
+  const finalAmount = Math.max(checkoutTotalDesc - selectedCouponDiscount, 0);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
@@ -116,14 +134,15 @@ const Checkout: React.FC = () => {
           <h3 className="text-sm font-bold text-gray-800 mb-4">商品清单</h3>
           <div className="space-y-4">
             {items.filter((i: any) => i.selected).map((item: any) => (
-              <div key={item.productId} className="flex gap-3">
+              <div key={`${item.productId}-${item.skuId || 'default'}`} className="flex gap-3">
                 <img
-                  src={item.productMainImage || 'https://picsum.photos/seed/product/100/100'}
+                  src={item.productImage || item.productMainImage || 'https://picsum.photos/seed/product/100/100'}
                   className="w-16 h-16 rounded-lg object-cover"
                   referrerPolicy="no-referrer"
                 />
                 <div className="flex-1 flex flex-col justify-between py-0.5">
                   <h4 className="text-xs font-medium text-gray-800 line-clamp-1">{item.productName}</h4>
+                  {item.skuSpecName && <p className="text-[11px] text-gray-400 line-clamp-1">{item.skuSpecName}</p>}
                   <div className="flex justify-between items-end">
                     <span className="text-sm font-bold text-gray-800">{formatPrice(item.productPrice || item.price)}</span>
                     <span className="text-xs text-gray-400">x{item.quantity}</span>
@@ -135,17 +154,31 @@ const Checkout: React.FC = () => {
         </div>
 
         {/* Coupon Section */}
-        <div className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-50">
-          <div className="flex items-center gap-2">
-            <span className="text-xl text-orange-500">🎫</span>
-            <span className="text-sm font-medium text-gray-700">优惠券</span>
-          </div>
-          <div className="flex items-center gap-1">
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl text-orange-500">🎫</span>
+              <span className="text-sm font-medium text-gray-700">优惠券</span>
+            </div>
             <span className="text-xs text-orange-500 font-bold">
-              {selectedCoupon ? `-${formatPrice(selectedCoupon.value)}` : `${coupons.length}张可用`}
+              {selectedCoupon ? `-${formatPrice(selectedCouponDiscount)}` : `${coupons.length}张可用`}
             </span>
-            <span className="text-gray-300 text-lg">›</span>
           </div>
+          {coupons.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <button onClick={() => setSelectedCoupon(null)} className="w-full text-left text-xs text-gray-400 py-2">不使用优惠券</button>
+              {coupons.map((coupon) => (
+                <button
+                  key={coupon.userCouponId}
+                  onClick={() => setSelectedCoupon(coupon)}
+                  className={`w-full flex justify-between items-center rounded-xl px-3 py-2 text-xs ${selectedCoupon?.userCouponId === coupon.userCouponId ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-500'}`}
+                >
+                  <span>{coupon.name}</span>
+                  <span>-{formatPrice(resolveCouponDiscount(checkoutTotalDesc, coupon))}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Price Breakdown */}
@@ -160,7 +193,7 @@ const Checkout: React.FC = () => {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">优惠券</span>
-            <span className="text-orange-500 font-medium">-{formatPrice(selectedCoupon?.value || 0)}</span>
+            <span className="text-orange-500 font-medium">-{formatPrice(selectedCouponDiscount)}</span>
           </div>
         </div>
 

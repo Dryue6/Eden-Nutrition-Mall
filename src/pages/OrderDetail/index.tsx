@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { orderApi } from '@/src/api';
+import { orderApi, refundApi } from '@/src/api';
 import { Order } from '@/src/api/types';
 import { startAlipaySandboxPayment } from '@/src/lib/alipay';
 import { formatPrice, formatDate, cn } from '@/src/lib/utils';
@@ -81,6 +81,23 @@ const OrderDetail: React.FC = () => {
     }
   };
 
+  const handleApplyRefund = async () => {
+    if (!order) return;
+    const modal = await Taro.showModal({
+      title: '申请退款',
+      content: `确认申请退还 ${formatPrice(order.payAmount)}？提交后将进入后台审核。`,
+      confirmText: '提交',
+    });
+    if (!modal.confirm) return;
+    await refundApi.apply({
+      orderNo: order.orderNo,
+      refundAmount: order.payAmount,
+      reason: '用户主动申请售后退款',
+    });
+    Taro.showToast({ title: '退款申请已提交', icon: 'success' });
+    fetchDetail(true);
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">加载中...</div>;
   if (!order) return <div className="flex flex-col items-center justify-center min-h-screen text-gray-500 gap-4">
     <p>订单不存在</p>
@@ -90,10 +107,10 @@ const OrderDetail: React.FC = () => {
   const currentStatus = order.status || 0;
   const steps = [
     { label: '提交订单', icon: '📦', active: true },
-    { label: '支付成功', icon: '💳', active: currentStatus >= 1 && currentStatus < 4 },
-    { label: '商家发货', icon: '🚚', active: currentStatus >= 2 && currentStatus < 4 },
+    { label: '支付成功', icon: '💳', active: currentStatus >= 1 && currentStatus <= 4 },
+    { label: '商家发货', icon: '🚚', active: currentStatus >= 2 && currentStatus <= 4 },
     {
-      label: currentStatus === 4 ? '已取消' : '交易完成',
+      label: currentStatus === 5 ? '已取消' : '交易完成',
       icon: '✓',
       active: currentStatus === 3 || currentStatus === 4 || currentStatus === 5
     },
@@ -111,7 +128,11 @@ const OrderDetail: React.FC = () => {
             {currentStatus === 0 ? '等待付款' :
              currentStatus === 1 ? '等待发货' :
              currentStatus === 2 ? '等待收货' :
-             currentStatus === 3 ? '订单已完成' : '订单已取消'}
+             currentStatus === 3 ? '订单已收货' :
+             currentStatus === 4 ? '订单已完成' :
+             currentStatus === 6 ? '退款审核中' :
+             currentStatus === 7 ? '已退款' :
+             currentStatus === 8 ? '退款已拒绝' : '订单已取消'}
           </h1>
           <p className="text-sm opacity-80">订单编号: {order.orderNo}</p>
         </div>
@@ -158,6 +179,7 @@ const OrderDetail: React.FC = () => {
                 <img src={item.productImage} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" />
                 <div className="flex-1 flex flex-col justify-between py-0.5">
                   <h4 className="text-xs font-medium text-gray-800 line-clamp-2">{item.productName}</h4>
+                  {item.skuSpecName && <span className="text-[10px] text-gray-400">{item.skuSpecName}</span>}
                   <div className="flex justify-between items-end">
                     <span className="text-xs text-gray-400">x{item.quantity}</span>
                     <span className="text-sm font-bold text-gray-800">{formatPrice(item.currentUnitPrice || item.price)}</span>
@@ -210,7 +232,13 @@ const OrderDetail: React.FC = () => {
       )}
       {order.status === 2 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
+          <button onClick={handleApplyRefund} className="px-6 py-2 rounded-full border border-orange-200 text-orange-500 text-sm font-medium">申请退款</button>
           <button onClick={handleConfirmReceive} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">确认收货</button>
+        </div>
+      )}
+      {[1, 3, 4].includes(order.status) && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
+          <button onClick={handleApplyRefund} className="px-8 py-2 rounded-full border border-orange-200 text-orange-500 text-sm font-medium">申请退款</button>
         </div>
       )}
     </div>

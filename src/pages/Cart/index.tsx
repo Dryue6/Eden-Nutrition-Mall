@@ -35,20 +35,20 @@ const Cart: React.FC = () => {
   /**
    * 更新购物车数量：允许数量扣减到 0，由后端复用 quantity <= 0 的移除逻辑。
    */
-  const handleUpdateQuantity = async (productId: number | undefined, quantity: number) => {
+  const handleUpdateQuantity = async (productId: number | undefined, quantity: number, skuId?: number) => {
     if (productId === undefined || quantity < 0) return;
     try {
-      await cartApi.updateQuantity(productId, quantity);
+      await cartApi.updateQuantity(productId, quantity, skuId);
       fetchCart();
     } catch (error) {
       console.error('Update quantity failed', error);
     }
   };
 
-  const handleRemove = async (productId: number | undefined) => {
+  const handleRemove = async (productId: number | undefined, skuId?: number) => {
     if (productId === undefined) return;
     try {
-      await cartApi.removeFromCart(productId);
+      await cartApi.removeFromCart(productId, skuId);
       fetchCart();
     } catch (error) {
       console.error('Failed to remove from cart', error);
@@ -56,10 +56,10 @@ const Cart: React.FC = () => {
     }
   };
 
-  const handleSelect = async (productId: number | undefined, selected: boolean) => {
+  const handleSelect = async (productId: number | undefined, selected: boolean, skuId?: number) => {
     if (productId === undefined) return;
     try {
-      await cartApi.selectItem(productId, selected);
+      await cartApi.selectItem(productId, selected, skuId);
       fetchCart();
     } catch (error) {
       console.error('Select item failed', error);
@@ -118,12 +118,12 @@ const Cart: React.FC = () => {
         {Array.isArray(items) && items.map((item) => {
           const productId = getProductId(item);
           return (
-          <div key={productId} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
+          <div key={`${productId}-${item.skuId || 'default'}`} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
             <div className="flex items-center">
               <input
                 type="checkbox"
                 checked={item.selected}
-                onChange={(e) => handleSelect(productId, e.target.checked)}
+                onChange={(e) => handleSelect(productId, e.target.checked, item.skuId)}
                 className="w-5 h-5 rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500"
               />
             </div>
@@ -137,24 +137,25 @@ const Cart: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-gray-900 text-sm mb-1 truncate">{item.productName}</h3>
+              {item.skuSpecName && <p className="text-[11px] text-gray-400 mb-1 truncate">{item.skuSpecName}</p>}
               <p className="text-emerald-600 font-bold mb-2">{formatPrice(item.price ?? item.productPrice ?? 0)}</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
                   <button
-                    onClick={() => handleUpdateQuantity(productId, item.quantity - 1)}
+                    onClick={() => handleUpdateQuantity(productId, item.quantity - 1, item.skuId)}
                     className="w-6 h-6 flex items-center justify-center text-gray-500 bg-white rounded-md shadow-sm"
                   >
                     <span className="text-sm font-bold">−</span>
                   </button>
                   <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
                   <button
-                    onClick={() => handleUpdateQuantity(productId, item.quantity + 1)}
+                    onClick={() => handleUpdateQuantity(productId, item.quantity + 1, item.skuId)}
                     className="w-6 h-6 flex items-center justify-center text-gray-500 bg-white rounded-md shadow-sm"
                   >
                     <span className="text-sm font-bold">+</span>
                   </button>
                 </div>
-                <button onClick={() => handleRemove(productId)} className="text-gray-300 hover:text-red-500">
+                <button onClick={() => handleRemove(productId, item.skuId)} className="text-gray-300 hover:text-red-500">
                   <span className="text-lg">🗑</span>
                 </button>
               </div>

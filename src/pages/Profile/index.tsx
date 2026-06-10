@@ -81,7 +81,7 @@ const Profile: React.FC = () => {
 
         <div className="flex items-center justify-between mb-8 relative z-10">
           <h1 className="text-white text-xl font-bold">个人中心</h1>
-          <button className="text-white/80 hover:text-white">
+          <button onClick={() => Taro.navigateTo({ url: '/pages/Settings/index' })} className="text-white/80 hover:text-white">
             <span className="text-xl right-0">⚙</span>
           </button>
         </div>
@@ -141,15 +141,15 @@ const Profile: React.FC = () => {
               <span className="text-2xl text-blue-500">📍</span>
               <span className="text-xs text-gray-600">地址管理</span>
             </div>
-            <div onClick={() => Taro.showToast({ title: '优惠券功能预留', icon: 'none' })} className="flex flex-col items-center gap-2 cursor-pointer">
+            <div onClick={() => Taro.navigateTo({ url: '/pages/CouponCenter/index' })} className="flex flex-col items-center gap-2 cursor-pointer">
               <span className="text-2xl text-orange-500">🎫</span>
               <span className="text-xs text-gray-600">优惠券</span>
             </div>
-            <div onClick={() => Taro.showToast({ title: '客服功能预留', icon: 'none' })} className="flex flex-col items-center gap-2 cursor-pointer">
+            <div onClick={() => Taro.navigateTo({ url: '/pages/SupportChat/index' })} className="flex flex-col items-center gap-2 cursor-pointer">
               <span className="text-2xl text-emerald-500">🎧</span>
               <span className="text-xs text-gray-600">我的客服</span>
             </div>
-            <div onClick={() => Taro.showToast({ title: '评价功能预留', icon: 'none' })} className="flex flex-col items-center gap-2 cursor-pointer">
+            <div onClick={() => Taro.navigateTo({ url: '/pages/MyReviews/index' })} className="flex flex-col items-center gap-2 cursor-pointer">
               <span className="text-2xl text-purple-500">✓</span>
               <span className="text-xs text-gray-600">我的评价</span>
             </div>

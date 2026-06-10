@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { View } from '@tarojs/components';
 
-import { productApi, seckillApi, userApi } from '@/src/api';
+import { noticeApi, productApi, seckillApi, userApi } from '@/src/api';
 import { ProductVO, SeckillSessionDTO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
 
@@ -27,6 +27,8 @@ const Home: React.FC = () => {
   const [seckillBannerText, setSeckillBannerText] = useState(EMPTY_SECKILL_BANNER_TEXT);
   const [hasSignedIn, setHasSignedIn] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   /** 兼容首页商品接口可能返回数组或分页 records 的两种结构。 */
   const normalizeProductList = (value: ProductVO[] | { records?: ProductVO[] }) => {
@@ -83,12 +85,38 @@ const Home: React.FC = () => {
     }
   };
 
+  /** 首页铃铛只在登录后查询未读数，避免未登录用户触发鉴权弹窗。 */
+  const fetchUnreadCount = async () => {
+    const token = Taro.getStorageSync('token');
+    if (!token) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const count = await noticeApi.unreadCount();
+      setUnreadCount(Number(count) || 0);
+    } catch (e) {
+      setUnreadCount(0);
+    }
+  };
+
+  /** 将首页搜索框关键词带到搜索结果页，由结果页统一调用商品列表接口。 */
+  const submitSearch = () => {
+    const keyword = searchKeyword.trim();
+    if (!keyword) {
+      Taro.showToast({ title: '请输入搜索关键词', icon: 'none' });
+      return;
+    }
+    Taro.navigateTo({ url: `/pages/SearchResults/index?keyword=${encodeURIComponent(keyword)}` });
+  };
+
   /** 首页 tab 每次展示时刷新首屏数据，确保点击首页能看到实际网络请求。 */
   const loadHomeData = () => {
     // 首页是 tabBar 页面，使用 Taro 页面展示生命周期确保每次进入首页都会触发首屏请求。
     fetchHomeProducts();
     fetchSeckillBannerText();
     checkSignInStatus();
+    fetchUnreadCount();
   };
 
   useDidShow(() => {
@@ -100,15 +128,21 @@ const Home: React.FC = () => {
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div className="flex-1 relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{fontSize: '18px'}}>🔍</span>
+          <span onClick={submitSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" style={{fontSize: '18px'}}>🔍</span>
           <input
             type="text"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitSearch();
+            }}
             placeholder="搜索营养补剂..."
             className="w-full bg-white border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm"
           />
         </div>
-        <button className="p-2 bg-white rounded-full shadow-sm text-gray-600">
+        <button onClick={() => Taro.navigateTo({ url: '/pages/NoticeList/index' })} className="p-2 bg-white rounded-full shadow-sm text-gray-600 relative">
           🔔
+          {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4">{unreadCount > 99 ? '99+' : unreadCount}</span>}
         </button>
       </header>
 
@@ -151,6 +185,8 @@ const Home: React.FC = () => {
                   selector: `#${item.id}`,
                   duration: 300
                 });
+              } else if (item.id === 'coupon') {
+                Taro.navigateTo({ url: '/pages/CouponCenter/index' });
               } else if (item.id === 'checkin') {
                 const token = Taro.getStorageSync('token');
                 if (!token) {
@@ -178,8 +214,6 @@ const Home: React.FC = () => {
                 } finally {
                   setIsSigningIn(false);
                 }
-              } else {
-                Taro.showToast({ title: '后端接口预留，功能开发中', icon: 'none' });
               }
             }}
             className={cn("flex flex-col items-center gap-2 hover:opacity-80 transition-opacity outline-none", item.disabled && "opacity-50 hover:opacity-50")}

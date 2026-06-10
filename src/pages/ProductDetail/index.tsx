@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Image, RichText } from '@tarojs/components';
 import { productApi, cartApi, reviewApi } from '@/src/api';
-import { ProductVO, ProductReview } from '@/src/api/types';
+import { ProductVO, ProductReview, ProductSku } from '@/src/api/types';
 import { formatPrice, formatDate } from '@/src/lib/utils';
 
 const ProductDetail: React.FC = () => {
@@ -13,6 +13,7 @@ const ProductDetail: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [selectedSku, setSelectedSku] = useState<ProductSku | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -23,6 +24,7 @@ const ProductDetail: React.FC = () => {
             reviewApi.getProductReviews(Number(id), { pageNum: 1, pageSize: 5 }),
           ]);
           setProduct(p);
+          setSelectedSku(p.skuList?.find((sku) => sku.status === 1 && sku.stock > 0) || null);
           setReviews(r.list);
         } catch (error) {
           console.error('Failed to fetch product detail', error);
@@ -56,8 +58,11 @@ const ProductDetail: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (!ensurePurchasableSku()) {
+      return;
+    }
     try {
-      await cartApi.addToCart(product.id, quantity);
+      await cartApi.addToCart(product.id, quantity, selectedSku?.id);
       Taro.showToast({ title: '已加入购物车', icon: 'success' });
     } catch (error) {
       console.error('Failed to add to cart', error);
@@ -68,8 +73,11 @@ const ProductDetail: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!product) return;
+    if (!ensurePurchasableSku()) {
+      return;
+    }
     try {
-      await cartApi.addToCart(product.id, quantity);
+      await cartApi.addToCart(product.id, quantity, selectedSku?.id);
       Taro.navigateTo({ url: '/pages/Checkout/index' });
     } catch (error) {
       console.error('Failed to pre-order', error);
@@ -80,6 +88,26 @@ const ProductDetail: React.FC = () => {
 
   if (loading) return <div className="flex items-center justify-center h-screen text-gray-500">加载中...</div>;
   if (!product) return <div className="flex items-center justify-center h-screen text-gray-500">商品不存在</div>;
+  const displayPrice = selectedSku?.price || product.price;
+  const displayStock = selectedSku?.stock ?? product.stock;
+
+  /**
+   * 统一校验 SKU 是否可购买，避免无库存 SKU 触发后端失败后被误提示为登录问题。
+   */
+  function ensurePurchasableSku() {
+    const purchasableSkus = Array.isArray(product.skuList)
+      ? product.skuList.filter((sku) => sku.status === 1 && sku.stock > 0)
+      : [];
+    if (purchasableSkus.length > 0 && (!selectedSku || selectedSku.status !== 1 || selectedSku.stock <= 0)) {
+      Taro.showToast({ title: '请选择可购买规格', icon: 'none' });
+      return false;
+    }
+    if (Array.isArray(product.skuList) && product.skuList.length > 0 && purchasableSkus.length === 0) {
+      Taro.showToast({ title: '暂无可购买规格', icon: 'none' });
+      return false;
+    }
+    return true;
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24">
@@ -99,8 +127,8 @@ const ProductDetail: React.FC = () => {
       {/* Info Section */}
       <div className="bg-white p-6 rounded-t-3xl -mt-6 relative z-10 shadow-sm">
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-3xl font-bold text-emerald-600">{formatPrice(product.price)}</span>
-          <span className="text-sm text-gray-400 line-through">{formatPrice(product.price * 1.2)}</span>
+          <span className="text-3xl font-bold text-emerald-600">{formatPrice(displayPrice)}</span>
+          <span className="text-sm text-gray-400 line-through">{formatPrice(displayPrice * 1.2)}</span>
         </div>
         <h1 className="text-xl font-bold text-gray-900 mb-4 leading-tight">
           {product.name}
@@ -108,9 +136,33 @@ const ProductDetail: React.FC = () => {
         <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-50 pt-4">
           <span>快递：免运费</span>
           <span>月销：{product.sales}</span>
-          <span>库存：{product.stock}</span>
+          <span>库存：{displayStock}</span>
         </div>
       </div>
+
+      {Array.isArray(product.skuList) && product.skuList.length > 0 && (
+        <div className="mt-4 bg-white p-6">
+          <h3 className="font-bold text-gray-800 mb-3">规格/口味/包装</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {product.skuList.map((sku) => {
+              const active = selectedSku?.id === sku.id;
+              const disabled = sku.status !== 1 || sku.stock <= 0;
+              const label = [sku.specName, sku.flavor, sku.packageSize].filter(Boolean).join(' / ');
+              return (
+                <button
+                  key={sku.id}
+                  disabled={disabled}
+                  onClick={() => !disabled && setSelectedSku(sku)}
+                  className={`rounded-xl border px-3 py-2 text-left text-xs ${disabled ? 'cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300' : active ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-100 bg-gray-50 text-gray-600'}`}
+                >
+                  <p className="font-bold">{label}</p>
+                  <p className="mt-1">{disabled ? '不可用' : `${formatPrice(sku.price)} · 库存 ${sku.stock}`}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Reviews Section */}
       <div className="mt-4 bg-white p-6">
@@ -118,7 +170,7 @@ const ProductDetail: React.FC = () => {
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
             商品评价 <span className="text-xs font-normal text-gray-400">({reviews.length})</span>
           </h3>
-          <button className="text-xs text-emerald-600">查看全部</button>
+          <button onClick={() => Taro.navigateTo({ url: `/pages/ReviewList/index?productId=${product.id}` })} className="text-xs text-emerald-600">查看全部</button>
         </div>
         {Array.isArray(reviews) && reviews.length > 0 ? (
           <div className="space-y-4">
@@ -152,7 +204,7 @@ const ProductDetail: React.FC = () => {
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex items-center gap-4 z-50">
         <div className="flex gap-4 px-2">
-          <button className="flex flex-col items-center gap-1 text-gray-500">
+          <button onClick={() => Taro.navigateTo({ url: `/pages/SupportChat/index?productId=${product.id}` })} className="flex flex-col items-center gap-1 text-gray-500">
             <span className="text-lg">💬</span>
             <span className="text-[16px]">客服</span>
           </button>
