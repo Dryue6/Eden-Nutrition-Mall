@@ -79,10 +79,10 @@ const Profile: React.FC = () => {
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/20 rounded-full -ml-12 -mb-12 blur-xl" />
 
-        <div className="flex items-center justify-between mb-8 relative z-10">
+        <div className="flex items-center mb-8 relative z-10">
           <h1 className="text-white text-xl font-bold">个人中心</h1>
-          <button onClick={() => Taro.navigateTo({ url: '/pages/Settings/index' })} className="text-white/80 hover:text-white">
-            <span className="text-xl right-0">⚙</span>
+          <button onClick={() => Taro.navigateTo({ url: '/pages/Settings/index' })} className="ml-auto w-9 h-9 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30">
+            <span className="text-lg">⚙</span>
           </button>
         </div>
 

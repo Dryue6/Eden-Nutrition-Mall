@@ -32,7 +32,7 @@ const MyReviews: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       <div className="bg-white p-4 sticky top-0 z-10 flex items-center shadow-sm">
-        <button onClick={() => Taro.navigateBack()} className="text-emerald-600 mr-4 text-sm">返回</button>
+        {/*<button onClick={() => Taro.navigateBack()} className="text-emerald-600 mr-4 text-sm">返回</button>*/}
         <h1 className="text-lg font-bold text-gray-800">我的评价</h1>
       </div>
       <div className="p-4 space-y-3">

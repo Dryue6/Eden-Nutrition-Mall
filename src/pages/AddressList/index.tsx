@@ -70,9 +70,9 @@ const AddressList: React.FC = () => {
     <div className="bg-gray-50 min-h-screen pb-24 relative">
       {/* Top Bar */}
       <div className="bg-white p-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
-        <button onClick={() => Taro.navigateBack()} className="text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-50">
+        {/*<button onClick={() => Taro.navigateBack()} className="text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-50">
           <span className="text-2xl">←</span>
-        </button>
+        </button>*/}
         <h1 className="text-lg font-bold text-gray-800">
           {isEditing ? (editForm.id ? '编辑地址' : '新增地址') : '收货地址'}
         </h1>

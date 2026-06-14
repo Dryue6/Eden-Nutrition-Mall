@@ -85,7 +85,7 @@ const Home: React.FC = () => {
     }
   };
 
-  /** 首页铃铛只在登录后查询未读数，避免未登录用户触发鉴权弹窗。 */
+  /*/!** 首页铃铛只在登录后查询未读数，避免未登录用户触发鉴权弹窗。 *!/
   const fetchUnreadCount = async () => {
     const token = Taro.getStorageSync('token');
     if (!token) {
@@ -98,7 +98,7 @@ const Home: React.FC = () => {
     } catch (e) {
       setUnreadCount(0);
     }
-  };
+  };*/
 
   /** 将首页搜索框关键词带到搜索结果页，由结果页统一调用商品列表接口。 */
   const submitSearch = () => {
@@ -116,7 +116,7 @@ const Home: React.FC = () => {
     fetchHomeProducts();
     fetchSeckillBannerText();
     checkSignInStatus();
-    fetchUnreadCount();
+    /*fetchUnreadCount();*/
   };
 
   useDidShow(() => {
@@ -124,7 +124,7 @@ const Home: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-6 p-4 overflow-x-hidden">
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div className="flex-1 relative">
@@ -132,7 +132,7 @@ const Home: React.FC = () => {
           <input
             type="text"
             value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
+            onChange={(e) => setSearchKeyword(e.detail.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') submitSearch();
             }}
@@ -140,10 +140,10 @@ const Home: React.FC = () => {
             className="w-full bg-white border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm"
           />
         </div>
-        <button onClick={() => Taro.navigateTo({ url: '/pages/NoticeList/index' })} className="p-2 bg-white rounded-full shadow-sm text-gray-600 relative">
+        {/*<button onClick={() => Taro.navigateTo({ url: '/pages/NoticeList/index' })} className="p-2 bg-white rounded-full shadow-sm text-gray-600 relative">
           🔔
           {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-        </button>
+        </button>*/}
       </header>
 
       {/* Banner Placeholder */}

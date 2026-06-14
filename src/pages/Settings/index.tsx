@@ -59,7 +59,7 @@ const Settings: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       <div className="bg-white p-4 sticky top-0 z-10 flex items-center shadow-sm">
-        <button onClick={() => Taro.navigateBack()} className="text-emerald-600 mr-4 text-sm">返回</button>
+        {/*<button onClick={() => Taro.navigateBack()} className="text-emerald-600 mr-4 text-sm">返回</button>*/}
         <h1 className="text-lg font-bold text-gray-800">设置</h1>
       </div>
       <div className="p-4 space-y-4">
@@ -70,7 +70,8 @@ const Settings: React.FC = () => {
             <span className="text-gray-400 mr-3">手机号</span>
             <span>{user.phone || '未绑定'}</span>
           </div>
-          <input value={user.email || ''} onChange={(e) => setUser({ ...user, email: e.target.value })} placeholder="邮箱" className="w-full bg-gray-50 rounded-lg px-3 py-3 text-sm" />
+          邮箱
+          <input value={user.email || ''} onChange={(e) => setUser({ ...user, email: e.target.value })} placeholder="请输入邮箱" className="w-full bg-gray-50 rounded-lg px-3 py-3 text-sm" />
           <button disabled={saving} onClick={handleSaveProfile} className="w-full bg-emerald-600 text-white rounded-lg py-3 font-bold disabled:opacity-60">保存资料</button>
         </section>
         <section className="bg-white rounded-xl p-4 space-y-3">

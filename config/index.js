@@ -108,7 +108,7 @@ const config = {
         enable: true,
         config: {selectorBlackList: ['body']}
       },
-      url: {enable: true, config: {limit: 1024}},
+      url: {enable: false, config: {limit: 1024}},
       cssModules: {enable: false, config: {generateScopedName: '[name]__[local]___[hash:base64:5]'}}
     },
     webpackChain(chain, webpack) {

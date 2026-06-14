@@ -37,7 +37,7 @@ const SearchResults: React.FC = () => {
       <div className="bg-white p-4 sticky top-0 z-10 shadow-sm">
         <form onSubmit={submitSearch} className="flex gap-2">
           <button type="button" onClick={() => Taro.navigateBack()} className="text-emerald-600 text-sm">返回</button>
-          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="搜索营养补剂" className="flex-1 bg-gray-50 rounded-full px-4 py-2 text-sm" />
+          <input value={keyword} onChange={(e) => setKeyword(e.detail.value)} onKeyDown={(e) => { if (e.key === 'Enter') fetchProducts(); }} placeholder="搜索营养补剂" className="flex-1 bg-gray-50 rounded-full px-4 py-2 text-sm" />
           <button type="submit" className="px-4 rounded-full bg-emerald-600 text-white text-sm">搜索</button>
         </form>
       </div>

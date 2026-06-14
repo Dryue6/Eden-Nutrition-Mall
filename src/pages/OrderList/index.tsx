@@ -57,6 +57,15 @@ const OrderList: React.FC = () => {
     }
   };
 
+  const getHeaderTitle = () => {
+    switch (Number(status)) {
+      case 0: return '待付款订单';
+      case 1: return '待发货订单';
+      case 2: return '待收货订单';
+      default: return '全部订单';
+    }
+  };
+
   const handleCancel = async (orderNo: string) => {
     try {
       await orderApi.cancelOrder(orderNo);
@@ -97,7 +106,7 @@ const OrderList: React.FC = () => {
     <div className="bg-gray-50 min-h-screen pb-24">
       {/* Top Bar */}
       <div className="bg-white py-4 sticky top-0 z-10 relative flex items-center justify-center shadow-sm">
-        <h1 className="text-lg font-bold text-gray-800">全部订单</h1>
+        <h1 className="text-lg font-bold text-gray-800">{getHeaderTitle()}</h1>
       </div>
 
       <div className="p-4 space-y-4">
