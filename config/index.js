@@ -27,6 +27,30 @@ class WXSSSanitizerPlugin {
           if (!assetName.endsWith('.wxss') && !assetName.endsWith('.css')) return;
           let source = assets[assetName].source();
           const original = source;
+          // Remove unsupported @media (color-gamut) blocks
+          let mediaIdx = source.indexOf('@media (color-gamut:');
+          while (mediaIdx !== -1) {
+            let depth = 0, endIdx = mediaIdx;
+            let hasOpeningBrace = false;
+            for (let i = mediaIdx; i < source.length; i++) {
+              if (source[i] === '{') { depth++; hasOpeningBrace = true; }
+              if (source[i] === '}') depth--;
+              if (depth === 0 && i > mediaIdx && hasOpeningBrace) {
+                endIdx = i + 1;
+                break;
+              }
+            }
+            if (!hasOpeningBrace) {
+              const eol = source.indexOf('\n', mediaIdx);
+              endIdx = eol !== -1 ? eol + 1 : source.length;
+            }
+            source = source.slice(0, mediaIdx) + source.slice(endIdx);
+            mediaIdx = source.indexOf('@media (color-gamut:');
+          }
+
+          // Replace unsupported color(display-p3 ...) with fallback value
+          source = source.replace(/color\(\s*display-p3\s+[^)]*\)/gi, 'inherit');
+
           ['@supports', '@tailwind', '@theme'].forEach(keyword => {
             let idx = source.indexOf(keyword);
             while (idx !== -1) {

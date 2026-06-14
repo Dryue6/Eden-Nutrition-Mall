@@ -1,3 +1,4 @@
+/*
 import React, { useEffect, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { noticeApi } from '@/src/api';
@@ -8,7 +9,7 @@ const NoticeList: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /** 拉取当前用户通知列表，消息中心首版固定加载前 50 条。 */
+  /!** 拉取当前用户通知列表，消息中心首版固定加载前 50 条。 *!/
   const fetchNotices = async () => {
     setLoading(true);
     try {
@@ -23,7 +24,7 @@ const NoticeList: React.FC = () => {
     fetchNotices();
   }, []);
 
-  /** 标记单条已读后本地同步状态，减少重复请求。 */
+  /!** 标记单条已读后本地同步状态，减少重复请求。 *!/
   const handleRead = async (notice: Notice) => {
     if (notice.isRead === 0) {
       await noticeApi.markRead(notice.id);
@@ -68,3 +69,4 @@ const NoticeList: React.FC = () => {
 };
 
 export default NoticeList;
+*/
