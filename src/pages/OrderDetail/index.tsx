@@ -120,9 +120,9 @@ const OrderDetail: React.FC = () => {
     <div className="bg-gray-50 min-h-screen pb-24">
       {/* 状态栏跟随页面自然滚动，避免与下方订单内容卡片层叠重叠。 */}
       <div className="bg-emerald-600 p-4 flex items-center shadow-sm text-white">
-        <button onClick={() => Taro.navigateBack()} className="text-white mr-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-emerald-500">
+        {/*<button onClick={() => Taro.navigateBack()} className="text-white mr-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-emerald-500">
           <span className="text-2xl text-white">←</span>
-        </button>
+        </button>*/}
         <div className="flex-1">
           <h1 className="text-lg font-bold">
             {currentStatus === 0 ? '等待付款' :
