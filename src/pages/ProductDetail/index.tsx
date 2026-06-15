@@ -140,7 +140,7 @@ const ProductDetail: React.FC = () => {
         </div>
       </div>
 
-      {Array.isArray(product.skuList) && product.skuList.length > 0 && (
+      {/*{Array.isArray(product.skuList) && product.skuList.length > 0 && (
         <div className="mt-4 bg-white p-6">
           <h3 className="font-bold text-gray-800 mb-3">规格/口味/包装</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -162,7 +162,7 @@ const ProductDetail: React.FC = () => {
             })}
           </div>
         </div>
-      )}
+      )}*/}
 
       {/* Reviews Section */}
       <div className="mt-4 bg-white p-6">

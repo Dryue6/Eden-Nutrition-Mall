@@ -232,7 +232,7 @@ const OrderDetail: React.FC = () => {
       )}
       {order.status === 2 && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex justify-end gap-3 z-50">
-          <button onClick={handleApplyRefund} className="px-6 py-2 rounded-full border border-orange-200 text-orange-500 text-sm font-medium">申请退款</button>
+          {/*<button onClick={handleApplyRefund} className="px-6 py-2 rounded-full border border-orange-200 text-orange-500 text-sm font-medium">申请退款</button>*/}
           <button onClick={handleConfirmReceive} className="px-8 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100">确认收货</button>
         </div>
       )}
