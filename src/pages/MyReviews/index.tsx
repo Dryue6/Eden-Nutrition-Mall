@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { reviewApi } from '@/src/api';
 import { ProductReview } from '@/src/api/types';
 import { formatDate } from '@/src/lib/utils';
+import { normalizeProductImageUrl } from '@/src/lib/productImages';
 
 const MyReviews: React.FC = () => {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
@@ -43,7 +44,7 @@ const MyReviews: React.FC = () => {
         ) : reviews.map((review) => (
           <div key={review.id} className="bg-white rounded-xl p-4 border border-gray-50 shadow-sm">
             <div className="flex gap-3">
-              <img src={review.productImage || 'https://picsum.photos/seed/product/100/100'} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" />
+              <img src={normalizeProductImageUrl(review.productImage, 'https://picsum.photos/seed/product/100/100')} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" />
               <div className="flex-1">
                 <h3 className="text-sm font-bold text-gray-800 line-clamp-1">{review.productName || `商品 ${review.productId}`}</h3>
                 <p className="text-xs text-yellow-500 mt-1">{'★'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</p>

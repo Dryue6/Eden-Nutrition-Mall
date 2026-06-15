@@ -2,7 +2,8 @@ import Taro from '@tarojs/taro';
 
 const USE_MOCK = false;
 const REAL_BACKEND_URL = 'http://localhost:8080/api';
-const baseURL = REAL_BACKEND_URL;
+export const API_BASE_URL = REAL_BACKEND_URL;
+const baseURL = API_BASE_URL;
 const LOGIN_PAGE_URL = '/pages/Login/index';
 
 interface RequestOptions {
@@ -11,7 +12,7 @@ interface RequestOptions {
   params?: Record<string, any>;
 }
 
-/** 过滤掉 params 中值为 null/undefined/NaN 的键，避免拼到 URL 上 */
+/** 过滤 params 中值为 null/undefined/NaN 的键，避免无效查询参数传到后端。 */
 function cleanParams(params?: Record<string, any>): Record<string, any> | undefined {
   if (!params) return undefined;
   const cleaned: Record<string, any> = {};
@@ -34,6 +35,16 @@ function navigateToLogin() {
   Taro.navigateTo({ url: LOGIN_PAGE_URL });
 }
 
+/**
+ * HTTP 401/403 有时不会返回标准 Result 包装体，这里按状态码先兜底处理，
+ * 保证搜索等页面遇到安全配置问题时不会被空响应或 HTML 错误页打断渲染。
+ */
+function handleUnauthorizedResponse() {
+  Taro.removeStorageSync('token');
+  Taro.removeStorageSync('userInfo');
+  navigateToLogin();
+}
+
 const request = async <T = any, R = any>(
   url: string,
   options: RequestOptions = {}
@@ -46,34 +57,42 @@ const request = async <T = any, R = any>(
       data: options.method === 'GET' ? cleanParams(options.params) : (options.data || options.params),
       header: {
         'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      }
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     });
+
+    if (res.statusCode === 401 || res.statusCode === 403) {
+      handleUnauthorizedResponse();
+      return Promise.reject(new Error('Unauthorized'));
+    }
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Promise.reject(new Error(`请求失败(${res.statusCode})`));
+    }
+
     const result = res.data;
-    if (!result) {
+    if (!result || typeof result !== 'object') {
       return Promise.reject(new Error('Empty response'));
     }
     if (result.code === 200 || result.success) {
       return result.data as R;
     }
     if (result.code === 401 || result.code === 403) {
-      // 401/403 在当前商城端都按登录态失效处理，避免仅提示失败而不进入登录流程。
-      Taro.removeStorageSync('token');
-      Taro.removeStorageSync('userInfo');
-      navigateToLogin();
+      // 业务响应中的 401/403 仍按登录态失效处理，和 HTTP 状态码兜底保持一致。
+      handleUnauthorizedResponse();
       return Promise.reject(new Error('Unauthorized'));
     }
     Taro.showToast({
       title: result.message || '请求失败',
       icon: 'none',
-      duration: 2000
+      duration: 2000,
     });
     return Promise.reject(new Error(result.message || 'Error'));
   } catch (error: any) {
     Taro.showToast({
       title: error.message || '网络异常',
       icon: 'none',
-      duration: 2000
+      duration: 2000,
     });
     return Promise.reject(error);
   }

@@ -4,6 +4,7 @@ import { View } from '@tarojs/components';
 import { cartApi, addressApi, orderApi, couponApi } from '@/src/api';
 import { CartVO, UserAddress, UserCoupon } from '@/src/api/types';
 import { formatPrice } from '@/src/lib/utils';
+import { resolveProductItemImage } from '@/src/lib/productImages';
 
 /** 按后端下单规则预估优惠金额：满减券直接减，折扣券按订单商品总额计算，未达门槛不抵扣。 */
 const resolveCouponDiscount = (totalAmount: number, coupon: UserCoupon | null) => {
@@ -136,7 +137,7 @@ const Checkout: React.FC = () => {
             {items.filter((i: any) => i.selected).map((item: any) => (
               <div key={`${item.productId}-${item.skuId || 'default'}`} className="flex gap-3">
                 <img
-                  src={item.productImage || item.productMainImage || 'https://picsum.photos/seed/product/100/100'}
+                  src={resolveProductItemImage(item, 'https://picsum.photos/seed/product/100/100')}
                   className="w-16 h-16 rounded-lg object-cover"
                   referrerPolicy="no-referrer"
                 />

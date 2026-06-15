@@ -5,6 +5,8 @@ import { UserAddress } from '@/src/api/types';
 import { cn } from '@/src/lib/utils';
 
 const AddressList: React.FC = () => {
+  const router = Taro.getCurrentInstance().router;
+  const isSelectMode = router?.params?.selectMode === 'seckill';
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -31,6 +33,22 @@ const AddressList: React.FC = () => {
       fetchAddresses();
     } catch (error) {
       console.error('Set default failed', error);
+    }
+  };
+
+  /** 业务选择模式下，点选地址即设为默认地址并返回来源页，供秒杀下单继续读取 addressId。 */
+  const handleSelectAddress = async (addr: UserAddress) => {
+    if (!isSelectMode) return;
+    try {
+      await addressApi.setDefault(addr.id);
+      setAddresses((prev) => prev.map((item) => ({ ...item, isDefault: item.id === addr.id ? 1 : 0 })));
+      Taro.showToast({ title: '已选择地址', icon: 'success' });
+      setTimeout(() => {
+        Taro.navigateBack();
+      }, 500);
+    } catch (error) {
+      console.error('Select address failed', error);
+      Taro.showToast({ title: '选择地址失败', icon: 'none' });
     }
   };
 
@@ -74,7 +92,7 @@ const AddressList: React.FC = () => {
           <span className="text-2xl">←</span>
         </button>*/}
         <h1 className="text-lg font-bold text-gray-800">
-          {isEditing ? (editForm.id ? '编辑地址' : '新增地址') : '收货地址'}
+          {isEditing ? (editForm.id ? '编辑地址' : '新增地址') : (isSelectMode ? '选择收货地址' : '收货地址')}
         </h1>
         <div className="w-8" />
       </div>
@@ -145,11 +163,23 @@ const AddressList: React.FC = () => {
         </div>
       ) : (
         <div className="p-4 space-y-4">
+          {isSelectMode && addresses.length > 0 && (
+            <div className="rounded-xl bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+              请选择本次秒杀订单使用的收货地址
+            </div>
+          )}
           {addresses.length === 0 ? (
             <div className="text-center py-20 text-gray-400">暂无收货地址</div>
           ) : (
             addresses.map((addr) => (
-              <div key={addr.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+              <div
+                key={addr.id}
+                onClick={() => handleSelectAddress(addr)}
+                className={cn(
+                  "bg-white rounded-2xl p-4 shadow-sm border border-gray-50",
+                  isSelectMode && "cursor-pointer active:bg-emerald-50"
+                )}
+              >
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 flex-shrink-0">
                     <span className="text-base">📍</span>
@@ -167,7 +197,10 @@ const AddressList: React.FC = () => {
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                   <button
-                    onClick={() => handleSetDefault(addr.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleSetDefault(addr.id);
+                    }}
                     className="flex items-center gap-1.5"
                   >
                     <div className={cn(
@@ -181,8 +214,36 @@ const AddressList: React.FC = () => {
                     </span>
                   </button>
                   <div className="flex gap-4">
-                    <button onClick={() => { setIsEditing(true); setEditForm(addr); }} className="text-xs text-gray-400">编辑</button>
-                    <button onClick={() => handleDelete(addr.id)} className="text-xs text-red-400">删除</button>
+                    {isSelectMode && (
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSelectAddress(addr);
+                        }}
+                        className="text-xs font-medium text-emerald-600"
+                      >
+                        选择
+                      </button>
+                    )}
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setIsEditing(true);
+                        setEditForm(addr);
+                      }}
+                      className="text-xs text-gray-400"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(addr.id);
+                      }}
+                      className="text-xs text-red-400"
+                    >
+                      删除
+                    </button>
                   </div>
                 </div>
               </div>

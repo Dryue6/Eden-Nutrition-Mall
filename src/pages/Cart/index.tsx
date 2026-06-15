@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
+import { Button, Checkbox, Image, Text, View } from '@tarojs/components';
 import { cartApi } from '@/src/api';
 import { CartItemVO, CartVO } from '@/src/api/types';
 import { formatPrice } from '@/src/lib/utils';
+import { resolveProductItemImage } from '@/src/lib/productImages';
+
+console.log('[Cart] module loaded');
 
 type CartDisplayItem = CartItemVO & { id?: number };
 
 const Cart: React.FC = () => {
+  console.log('[Cart] render start');
+
   const [cart, setCart] = useState<CartVO | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -14,6 +20,7 @@ const Cart: React.FC = () => {
    * 拉取最新购物车数据；购物车是 tab 页面，必须在页面重新显示时刷新缓存状态。
    */
   const fetchCart = async () => {
+    console.log('[Cart] fetchCart start');
     setLoading(true);
     try {
       const data = await cartApi.getCart();
@@ -26,10 +33,13 @@ const Cart: React.FC = () => {
   };
 
   useDidShow(() => {
+    console.log('[Cart] useDidShow');
     fetchCart();
   });
 
-  /** 统一从后端真实 productId 或历史兼容 id 中取得购物车操作所需商品 ID。 */
+  /**
+   * 统一从后端真实 productId 或历史兼容 id 中取得购物车操作所需商品 ID。
+   */
   const getProductId = (item: CartDisplayItem) => item.productId ?? item.id;
 
   /**
@@ -45,6 +55,9 @@ const Cart: React.FC = () => {
     }
   };
 
+  /**
+   * 删除购物车商品；缺少商品 ID 时直接忽略，避免向后端发送无效路径。
+   */
   const handleRemove = async (productId: number | undefined, skuId?: number) => {
     if (productId === undefined) return;
     try {
@@ -56,6 +69,9 @@ const Cart: React.FC = () => {
     }
   };
 
+  /**
+   * 切换单个商品选中状态；小程序 Checkbox 不依赖 e.target.checked，直接传入目标状态。
+   */
   const handleSelect = async (productId: number | undefined, selected: boolean, skuId?: number) => {
     if (productId === undefined) return;
     try {
@@ -66,6 +82,9 @@ const Cart: React.FC = () => {
     }
   };
 
+  /**
+   * 切换全选状态；由当前 allSelected 反推目标状态，避免 HTML 事件模型兼容问题。
+   */
   const handleSelectAll = async (selected: boolean) => {
     try {
       await cartApi.selectAll(selected);
@@ -75,11 +94,20 @@ const Cart: React.FC = () => {
     }
   };
 
+  /**
+   * 进入结算页，结算页继续负责地址、优惠券和订单创建校验。
+   */
   const handleCheckout = () => {
     Taro.navigateTo({ url: '/pages/Checkout/index' });
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-140px)] text-gray-500">加载中...</div>;
+  if (loading) {
+    return (
+      <View className="flex min-h-[calc(100vh-140px)] items-center justify-center text-gray-500">
+        <Text>加载中...</Text>
+      </View>
+    );
+  }
 
   const items: CartDisplayItem[] = cart?.items || cart?.cartItems || [];
   const selectedAmount = cart?.selectedAmount ?? items
@@ -91,105 +119,102 @@ const Cart: React.FC = () => {
 
   if (!items || items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] p-4 text-center">
-        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-          <span className="text-4xl text-gray-300">🛍</span>
-        </div>
-        <h2 className="text-lg font-bold text-gray-800 mb-2">购物车为空</h2>
-        <p className="text-sm text-gray-500 mb-8">赶快去挑选你喜欢的商品吧</p>
-        <button
+      <View className="flex min-h-[calc(100vh-140px)] flex-col items-center justify-center p-4 text-center">
+        <View className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-50">
+          <Text className="text-4xl text-gray-300">🛍</Text>
+        </View>
+        <Text className="mb-2 text-lg font-bold text-gray-800">购物车为空</Text>
+        <Text className="mb-8 text-sm text-gray-500">赶快去挑选你喜欢的商品吧</Text>
+        <Button
           onClick={() => Taro.switchTab({ url: '/pages/Category/index' })}
-          className="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-200"
+          className="rounded-full bg-emerald-600 px-8 py-3 font-bold text-white shadow-lg shadow-emerald-200"
         >
           去逛逛
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-32">
-      <header className="bg-white p-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
-        <h1 className="text-lg font-bold text-gray-800">购物车 ({items.length})</h1>
-        <button onClick={() => cartApi.clearCart().then(fetchCart)} className="text-xs text-gray-400">清空</button>
-      </header>
+    <View className="min-h-screen bg-gray-50 pb-32">
+      <View className="sticky top-0 z-10 flex items-center justify-between bg-white p-4 shadow-sm">
+        <Text className="text-lg font-bold text-gray-800">购物车 ({items.length})</Text>
+        <Button onClick={() => cartApi.clearCart().then(fetchCart)} className="text-xs text-gray-400">
+          清空
+        </Button>
+      </View>
 
-      <div className="p-4 space-y-4">
-        {Array.isArray(items) && items.map((item) => {
+      <View className="space-y-4 p-4">
+        {items.map((item) => {
           const productId = getProductId(item);
           return (
-          <div key={`${productId}-${item.skuId || 'default'}`} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={item.selected}
-                onChange={(e) => handleSelect(productId, e.target.checked, item.skuId)}
-                className="w-5 h-5 rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500"
-              />
-            </div>
-            <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
-              <img
-                src={item.productMainImage || item.productImage || 'https://picsum.photos/seed/product/200/200'}
-                alt={item.productName}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 text-sm mb-1 truncate">{item.productName}</h3>
-              {item.skuSpecName && <p className="text-[11px] text-gray-400 mb-1 truncate">{item.skuSpecName}</p>}
-              <p className="text-emerald-600 font-bold mb-2">{formatPrice(item.price ?? item.productPrice ?? 0)}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
-                  <button
-                    onClick={() => handleUpdateQuantity(productId, item.quantity - 1, item.skuId)}
-                    className="w-6 h-6 flex items-center justify-center text-gray-500 bg-white rounded-md shadow-sm"
-                  >
-                    <span className="text-sm font-bold">−</span>
-                  </button>
-                  <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => handleUpdateQuantity(productId, item.quantity + 1, item.skuId)}
-                    className="w-6 h-6 flex items-center justify-center text-gray-500 bg-white rounded-md shadow-sm"
-                  >
-                    <span className="text-sm font-bold">+</span>
-                  </button>
-                </div>
-                <button onClick={() => handleRemove(productId, item.skuId)} className="text-gray-300 hover:text-red-500">
-                  <span className="text-lg">🗑</span>
-                </button>
-              </div>
-            </div>
-          </div>
+            <View key={`${productId}-${item.skuId || 'default'}`} className="flex gap-4 rounded-2xl border border-gray-50 bg-white p-4 shadow-sm">
+              <View className="flex items-center">
+                <Checkbox
+                  checked={Boolean(item.selected)}
+                  onClick={() => handleSelect(productId, !item.selected, item.skuId)}
+                  className="scale-75"
+                />
+              </View>
+              <View className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                <Image
+                  src={resolveProductItemImage(item, 'https://picsum.photos/seed/product/200/200')}
+                  mode="aspectFill"
+                  className="h-full w-full"
+                />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="mb-1 block truncate text-sm font-medium text-gray-900">{item.productName}</Text>
+                <Text className="mb-2 block font-bold text-emerald-600">{formatPrice(item.price ?? item.productPrice ?? 0)}</Text>
+                <View className="flex items-center justify-between">
+                  <View className="flex items-center gap-3 rounded-lg bg-gray-50 p-1">
+                    <Button
+                      onClick={() => handleUpdateQuantity(productId, item.quantity - 1, item.skuId)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-gray-500 shadow-sm"
+                    >
+                      <Text className="text-sm font-bold">−</Text>
+                    </Button>
+                    <Text className="w-4 text-center text-xs font-bold">{item.quantity}</Text>
+                    <Button
+                      onClick={() => handleUpdateQuantity(productId, item.quantity + 1, item.skuId)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-gray-500 shadow-sm"
+                    >
+                      <Text className="text-sm font-bold">+</Text>
+                    </Button>
+                  </View>
+                  <Button onClick={() => handleRemove(productId, item.skuId)} className="text-gray-300 hover:text-red-500">
+                    <Text className="text-lg">🗑</Text>
+                  </Button>
+                </View>
+              </View>
+            </View>
           );
         })}
-      </div>
+      </View>
 
-      {/* Bottom Bar */}
-      <div className="fixed bottom-20 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-4 flex items-center justify-between z-50">
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={cart?.allSelected || false}
-            onChange={(e) => handleSelectAll(e.target.checked)}
-            className="w-5 h-5 rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500"
+      <View className="fixed bottom-20 left-0 right-0 z-50 mx-auto flex max-w-md items-center justify-between border-t border-gray-100 bg-white p-4">
+        <View className="flex items-center gap-2">
+          <Checkbox
+            checked={Boolean(cart?.allSelected)}
+            onClick={() => handleSelectAll(!cart?.allSelected)}
+            className="scale-75"
           />
-          <span className="text-sm text-gray-600">全选</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-[20px] text-gray-400">合计</p>
-            <p className="text-lg font-bold text-emerald-600">{formatPrice(selectedAmount)}</p>
-          </div>
-          <button
+          <Text className="text-sm text-gray-600">全选</Text>
+        </View>
+        <View className="flex items-center gap-4">
+          <View className="text-right">
+            <Text className="block text-[20px] text-gray-400">合计</Text>
+            <Text className="block text-lg font-bold text-emerald-600">{formatPrice(selectedAmount)}</Text>
+          </View>
+          <Button
             onClick={handleCheckout}
-            className="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-100"
+            className="rounded-full bg-emerald-600 px-8 py-3 font-bold text-white shadow-lg shadow-emerald-100"
           >
             结算
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </View>
+      </View>
+    </View>
   );
 };
 

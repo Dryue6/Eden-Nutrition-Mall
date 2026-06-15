@@ -4,6 +4,7 @@ import { orderApi, refundApi } from '@/src/api';
 import { Order } from '@/src/api/types';
 import { startAlipaySandboxPayment } from '@/src/lib/alipay';
 import { formatPrice, formatDate, cn } from '@/src/lib/utils';
+import { resolveProductItemImage } from '@/src/lib/productImages';
 
 const OrderDetail: React.FC = () => {
   const router = Taro.getCurrentInstance().router;
@@ -176,7 +177,7 @@ const OrderDetail: React.FC = () => {
           <div className="space-y-4">
             {Array.isArray(order.orderItems) && order.orderItems.map((item, idx) => (
               <div key={idx} className="flex gap-3">
-                <img src={item.productImage} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" />
+                <img src={resolveProductItemImage(item, 'https://picsum.photos/seed/product/100/100')} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" />
                 <div className="flex-1 flex flex-col justify-between py-0.5">
                   <h4 className="text-xs font-medium text-gray-800 line-clamp-2">{item.productName}</h4>
                   {item.skuSpecName && <span className="text-[10px] text-gray-400">{item.skuSpecName}</span>}

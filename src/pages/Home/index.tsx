@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { View } from '@tarojs/components';
+import { View, Text, Input } from '@tarojs/components';
 
 import { noticeApi, productApi, seckillApi, userApi } from '@/src/api';
 import { ProductVO, SeckillSessionDTO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
+import { resolveProductImage } from '@/src/lib/productImages';
 
 const EMPTY_SECKILL_BANNER_TEXT = '暂无秒杀活动';
 const HOME_PRODUCT_LIMIT = 4;
@@ -107,7 +108,12 @@ const Home: React.FC = () => {
       Taro.showToast({ title: '请输入搜索关键词', icon: 'none' });
       return;
     }
-    Taro.navigateTo({ url: `/pages/SearchResults/index?keyword=${encodeURIComponent(keyword)}` });
+    // 小程序端不依赖 H5 的 keydown/form 行为，统一由 Input.confirm 和搜索按钮触发页面跳转。
+    Taro.navigateTo({ url: `/pages/SearchResults/index?keyword=${encodeURIComponent(keyword)}` })
+      .catch((error) => {
+        console.error('Navigate to search results failed', error);
+        Taro.showToast({ title: '搜索页打开失败', icon: 'none' });
+      });
   };
 
   /** 首页 tab 每次展示时刷新首屏数据，确保点击首页能看到实际网络请求。 */
@@ -126,29 +132,33 @@ const Home: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 p-4 overflow-x-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex-1 relative">
-          <span onClick={submitSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" style={{fontSize: '18px'}}>🔍</span>
-          <input
-            type="text"
+      <View className="flex items-center justify-between gap-2">
+        <View className="flex-1 flex items-center rounded-full bg-white px-3 py-2 shadow-sm">
+          <Text className="mr-2 text-base text-gray-400">🔍</Text>
+          <Input
             value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.detail.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitSearch();
-            }}
+            onInput={(event) => setSearchKeyword(String(event.detail.value || ''))}
+            onConfirm={submitSearch}
+            confirmType="search"
             placeholder="搜索营养补剂..."
-            className="w-full bg-white border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm"
+            className="min-w-0 flex-1 text-sm text-gray-800"
           />
-        </div>
+        </View>
+        <View
+          onClick={submitSearch}
+          className="flex h-9 min-w-14 items-center justify-center rounded-full bg-emerald-600 px-4 shadow-sm"
+        >
+          <Text className="text-sm font-medium text-white">搜索</Text>
+        </View>
         {/*<button onClick={() => Taro.navigateTo({ url: '/pages/NoticeList/index' })} className="p-2 bg-white rounded-full shadow-sm text-gray-600 relative">
           🔔
           {unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4">{unreadCount > 99 ? '99+' : unreadCount}</span>}
         </button>*/}
-      </header>
+      </View>
 
       {/* Banner Placeholder */}
       <section className="w-full h-40 bg-emerald-600 rounded-2xl overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-700/50 to-transparent flex flex-col justify-center p-6 text-white">
+        <div className="absolute inset-0 flex flex-col justify-center p-6 text-white">
           <h2 className="text-xl font-bold mb-1">限时秒杀</h2>
           <p className="text-sm opacity-90">{seckillBannerText}</p>
           {seckillBannerText !== EMPTY_SECKILL_BANNER_TEXT && (
@@ -160,12 +170,6 @@ const Home: React.FC = () => {
             </button>
           )}
         </div>
-        <img
-          src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800"
-          alt="Banner"
-          className="w-full h-full object-cover mix-blend-overlay"
-          referrerPolicy="no-referrer"
-        />
       </section>
 
       {/* Quick Actions */}
@@ -281,7 +285,7 @@ const ProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
       <View onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${product.id}` })}>
         <div className="aspect-square bg-gray-100 overflow-hidden">
           <img
-            src={product.mainImage || 'https://picsum.photos/seed/nutrition/400/400'}
+            src={resolveProductImage(product, 'https://picsum.photos/seed/nutrition/400/400')}
             alt={product.name}
             className="w-full h-full object-cover"
           />

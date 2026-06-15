@@ -4,6 +4,7 @@ import { View, Image, RichText } from '@tarojs/components';
 import { productApi, cartApi, reviewApi } from '@/src/api';
 import { ProductVO, ProductReview, ProductSku } from '@/src/api/types';
 import { formatPrice, formatDate } from '@/src/lib/utils';
+import { resolveProductImage } from '@/src/lib/productImages';
 
 const ProductDetail: React.FC = () => {
   const router = Taro.getCurrentInstance().router;
@@ -117,7 +118,7 @@ const ProductDetail: React.FC = () => {
       {/* Image Gallery */}
       <div className="w-full aspect-square bg-white">
         <img
-          src={product.mainImage || 'https://picsum.photos/seed/product/800/800'}
+          src={resolveProductImage(product, 'https://picsum.photos/seed/product/800/800')}
           alt={product.name}
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"

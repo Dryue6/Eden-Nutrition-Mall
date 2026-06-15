@@ -4,6 +4,7 @@ import { View, Image } from '@tarojs/components';
 import { categoryApi, productApi } from '@/src/api';
 import { CategoryTreeVO, ProductVO } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
+import { resolveProductImage } from '@/src/lib/productImages';
 
 const Category: React.FC = () => {
   const [categories, setCategories] = useState<CategoryTreeVO[]>([]);
@@ -167,7 +168,7 @@ const CategoryProductCard: React.FC<{ product: ProductVO }> = ({ product }) => {
       </div>
       <div className="w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
         <img
-          src={product.mainImage || 'https://picsum.photos/seed/product/200/200'}
+          src={resolveProductImage(product, 'https://picsum.photos/seed/product/200/200')}
           alt={product.name}
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"

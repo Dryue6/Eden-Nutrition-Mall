@@ -53,6 +53,7 @@ export interface ProductVO {
   name: string;
   categoryId: number;
   mainImage: string;
+  imageUrl?: string;
   subImages: string;
   detail: string;
   price: number;

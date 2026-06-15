@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { View } from '@tarojs/components';
 import { addressApi, seckillApi } from '@/src/api';
 import { SeckillSessionDTO, SeckillProduct, UserAddress } from '@/src/api/types';
 import { formatPrice, cn } from '@/src/lib/utils';
+import { resolveProductImage } from '@/src/lib/productImages';
 
 const Seckill: React.FC = () => {
   const [sessions, setSessions] = useState<SeckillSessionDTO[]>([]);
@@ -25,6 +26,22 @@ const Seckill: React.FC = () => {
     }
   };
 
+  /** 秒杀下单依赖后端默认地址，每次页面重新显示都刷新，保证从地址页返回后能拿到刚选择的地址。 */
+  const fetchDefaultAddress = async () => {
+    const token = Taro.getStorageSync('token');
+    if (!token) {
+      setDefaultAddress(null);
+      return;
+    }
+    try {
+      const data = await addressApi.getDefault();
+      setDefaultAddress(data);
+    } catch (error) {
+      console.warn('Failed to fetch default address', error);
+      setDefaultAddress(null);
+    }
+  };
+
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -40,19 +57,9 @@ const Seckill: React.FC = () => {
     fetchSessions();
   }, []);
 
-  useEffect(() => {
-    const fetchDefaultAddress = async () => {
-      const token = Taro.getStorageSync('token');
-      if (!token) return;
-      try {
-        const data = await addressApi.getDefault();
-        setDefaultAddress(data);
-      } catch (error) {
-        console.warn('Failed to fetch default address', error);
-      }
-    };
+  useDidShow(() => {
     fetchDefaultAddress();
-  }, []);
+  });
 
   useEffect(() => {
     fetchProducts();
@@ -89,8 +96,9 @@ const Seckill: React.FC = () => {
 
     // 秒杀接口会直接创建订单，前端必须带上可用的默认收货地址。
     if (!defaultAddress?.id) {
-      Taro.showToast({ title: '请先设置默认收货地址', icon: 'none' });
-      Taro.navigateTo({ url: '/pages/AddressList/index' });
+      Taro.showToast({ title: '请选择收货地址', icon: 'none' });
+      // 通过选择模式进入地址页，用户点选地址后地址页会设置默认地址并返回秒杀页。
+      Taro.navigateTo({ url: '/pages/AddressList/index?selectMode=seckill' });
       return;
     }
 
@@ -168,7 +176,7 @@ const Seckill: React.FC = () => {
               <div key={seckillId} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-50">
                 <View onClick={() => Taro.navigateTo({ url: `/pages/ProductDetail/index?id=${detailId}` })} className="w-28 h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer">
                   <img
-                    src={'https://picsum.photos/seed/seckill/200/200'}
+                    src={resolveProductImage(product, 'https://picsum.photos/seed/seckill/200/200')}
                     alt={'秒杀商品'}
                     className="w-full h-full object-cover"
                   />
